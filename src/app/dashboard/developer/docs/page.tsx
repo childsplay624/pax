@@ -1,8 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { 
-    Terminal, Globe, Zap, Shield, 
+import {
+    Terminal, Globe, Zap, Shield,
     BookOpen, Code2, ChevronRight,
     Command, Box, Lock, Server
 } from "lucide-react";
@@ -72,7 +72,7 @@ export default function ApiDocsPage() {
                         <p className="text-white/40 text-sm leading-relaxed font-medium">Creates a new logistics order in our network and returns a PAX Tracking ID.</p>
                         <div className={CODE}>
                             <pre className="whitespace-pre-wrap">
-{`{
+                                {`{
   "sender": {
     "name": "Jane Merchant",
     "phone": "+234 810 000 0005"
@@ -115,7 +115,7 @@ export default function ApiDocsPage() {
                     <p className="text-white/40 text-sm leading-relaxed font-medium">
                         PAX can send HTTP POST notifications to your server when events occur in your account. Active events: <code className="text-blue-300">shipment.created</code>, <code className="text-blue-300">shipment.delivered</code>.
                     </p>
-                </div>
+                </section>
 
             </div>
 

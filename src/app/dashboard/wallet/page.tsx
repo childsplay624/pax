@@ -2,9 +2,9 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-    Wallet, ArrowUpRight, ArrowDownLeft, Plus, X, 
-    CreditCard, Shield, Zap, Loader2, TrendingUp, 
+import {
+    Wallet, ArrowUpRight, ArrowDownLeft, Plus, X,
+    CreditCard, Shield, Zap, Loader2, TrendingUp,
     History, Landmark, CheckCircle2, AlertCircle, Info,
     BarChart3, PieChart, ShieldCheck
 } from "lucide-react";
@@ -18,7 +18,7 @@ const AMOUNTS = [5000, 10000, 25000, 50000, 100000, 250000];
 export default function WalletPage() {
     const [data, setData] = useState<WalletData | null>(null);
     const [activeTab, setActiveTab] = useState<"history" | "settlements">("history");
-    
+
     // Top-up Modal
     const [fundModal, setFundModal] = useState(false);
     const [amount, setAmount] = useState("");
@@ -74,7 +74,7 @@ export default function WalletPage() {
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                
+
                 {/* Main Wallet Card */}
                 <div className={cn(BOX, "relative p-10 flex flex-col justify-between min-h-[400px] overflow-hidden group")}>
                     <div className="absolute top-0 right-0 w-64 h-64 bg-red-brand/10 rounded-full blur-[100px] -mr-32 -mt-32 transition-all group-hover:bg-red-brand/20" />
@@ -196,7 +196,7 @@ export default function WalletPage() {
                                 ))
                             ) : data?.transactions.length === 0 ? (
                                 <tr><td colSpan={6} className="px-10 py-20 text-center text-white/20 font-bold uppercase tracking-widest text-xs">No transactions recorded</td></tr>
-                            ) : data?.transactions.map((tx, i) => (
+                            ) : data?.transactions.map((tx: any, i: number) => (
                                 <tr key={tx.id} className="group hover:bg-white/[0.02] transition-colors">
                                     <td className="px-10 py-6">
                                         <span className="font-mono text-[11px] font-black text-white">{tx.ref}</span>
@@ -288,7 +288,7 @@ export default function WalletPage() {
                             className="fixed inset-0 z-[70] flex items-center justify-center p-6 pointer-events-none">
                             <div className="bg-[#111116] border border-white/[0.1] rounded-[2.5rem] p-10 w-full max-w-lg pointer-events-auto shadow-2xl relative">
                                 <button onClick={() => setSettleModal(false)} className="absolute top-8 right-8 text-white/20 hover:text-white transition-all"><X className="w-6 h-6" /></button>
-                                
+
                                 {settleSuccess ? (
                                     <div className="py-20 text-center animate-in fade-in zoom-in duration-500">
                                         <div className="w-24 h-24 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-8 border border-emerald-500/20">

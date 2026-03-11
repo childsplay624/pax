@@ -1,7 +1,7 @@
 "use server";
 
 import { createServerSupabaseClient } from "@/lib/supabase-server";
-import { crypto } from "crypto";
+
 
 /* ── Generate Secure API Key Pair ───────────────────────────── */
 function generateKeySet() {
@@ -31,12 +31,12 @@ export async function createApiKey(name: string): Promise<{ secret: string | nul
 
     const { pub, secret } = generateKeySet();
 
-    const { error } = await supabase.from("merchant_api_keys").insert({
+    const { error } = await supabase.from("merchant_api_keys" as any).insert({
         user_id: user.id,
         key_name: name || "Default Key",
         public_key: pub,
         secret_hash: secret, // In a real app, hash this! Simplified for demo.
-    });
+    } as any);
 
     if (error) return { secret: null, error: "Failed to generate key" };
     return { secret, error: null };
@@ -77,12 +77,12 @@ export async function createWebhook(url: string) {
 
     const secret = `whsec_${Math.random().toString(36).substring(2, 12)}`;
 
-    const { error } = await supabase.from("merchant_webhooks").insert({
+    const { error } = await supabase.from("merchant_webhooks" as any).insert({
         user_id: user.id,
         url,
         secret,
         events: ["shipment.created", "shipment.updated", "shipment.delivered"]
-    });
+    } as any);
 
     return { success: !error, error: error?.message };
 }

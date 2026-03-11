@@ -24,11 +24,11 @@ interface Props {
 const MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
 
 export default function AddressAutocomplete({ value, onChange, placeholder = "Enter an address", className, dark = false }: Props) {
-    const [query,       setQuery]       = useState(value);
+    const [query, setQuery] = useState(value);
     const [predictions, setPredictions] = useState<Prediction[]>([]);
-    const [loading,     setLoading]     = useState(false);
-    const [open,        setOpen]        = useState(false);
-    const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+    const [loading, setLoading] = useState(false);
+    const [open, setOpen] = useState(false);
+    const debounceRef = useRef<any>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
     // Sync external value changes

@@ -26,7 +26,8 @@ interface Shipment {
 }
 
 export default function WaybillPage() {
-    const { id } = useParams();
+    const params = useParams();
+    const id = params?.id as string;
     const router = useRouter();
     const [shipment, setShipment] = useState<Shipment | null>(null);
     const [loading, setLoading] = useState(true);
@@ -70,7 +71,7 @@ export default function WaybillPage() {
 
     return (
         <div className="min-h-screen bg-gray-100 py-10 print:p-0 print:bg-white">
-            
+
             {/* Toolbar — hidden on print */}
             <div className="max-w-[800px] mx-auto mb-6 flex items-center justify-between px-4 print:hidden">
                 <button onClick={() => router.back()} className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors font-semibold">
@@ -85,7 +86,7 @@ export default function WaybillPage() {
 
             {/* Waybill Sheet */}
             <div className="max-w-[800px] mx-auto bg-white shadow-2xl print:shadow-none print:w-full overflow-hidden border border-gray-200 print:border-none">
-                
+
                 {/* Header */}
                 <div className="bg-black text-white p-8 flex items-center justify-between border-b-4 border-red-brand">
                     <div className="flex items-center gap-4">
@@ -107,7 +108,7 @@ export default function WaybillPage() {
 
                 {/* Main Grid */}
                 <div className="grid grid-cols-2 divide-x divide-gray-200">
-                    
+
                     {/* SENDER BLOCK */}
                     <div className="p-8 space-y-6">
                         <div className="flex items-center gap-2 mb-2">
