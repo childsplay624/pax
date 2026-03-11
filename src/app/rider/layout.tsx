@@ -8,6 +8,7 @@ import {
     LogOut, Menu, X, ChevronRight,
     Radio, Activity
 } from "lucide-react";
+import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import { signOut } from "@/app/actions/auth";
 import { motion, AnimatePresence } from "framer-motion";
@@ -23,16 +24,25 @@ const NAV = [
 export default function RiderLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const router = useRouter();
-    const [rider, setRider] = useState<{ name: string; email: string } | null>(null);
+    const [rider, setRider] = useState<{ name: string; email: string; avatar_url?: string } | null>(null);
     const [open, setOpen] = useState(false);
 
     useEffect(() => {
-        supabase.auth.getUser().then(({ data }) => {
+        supabase.auth.getUser().then(async ({ data }) => {
             if (!data.user) { router.push("/login?redirect=/rider"); return; }
             const name = (data.user.user_metadata?.full_name as string)
                 || data.user.email?.split("@")[0]
                 || "Rider";
-            setRider({ name, email: data.user.email ?? "" });
+
+            // Fetch avatar_url from riders table
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { data: riderRow } = await (supabase as any)
+                .from("riders")
+                .select("avatar_url")
+                .eq("user_id", data.user.id)
+                .maybeSingle();
+
+            setRider({ name, email: data.user.email ?? "", avatar_url: riderRow?.avatar_url ?? undefined });
         });
     }, [router]);
 
@@ -98,8 +108,21 @@ export default function RiderLayout({ children }: { children: React.ReactNode })
             {/* User / sign-out */}
             <div className="px-3 pb-5 pt-3 border-t border-white/[0.06] mt-1">
                 <div className="flex items-center gap-3 px-3 py-2 mb-1">
-                    <div className="w-8 h-8 rounded-full bg-[#eb0000] flex items-center justify-center text-white font-black text-xs flex-shrink-0">
-                        {initials}
+                    <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-white/10">
+                        {rider?.avatar_url ? (
+                            <Image
+                                src={rider.avatar_url}
+                                alt={rider.name}
+                                width={32}
+                                height={32}
+                                className="w-full h-full object-cover"
+                                unoptimized
+                            />
+                        ) : (
+                            <div className="w-full h-full bg-[#eb0000] flex items-center justify-center text-white font-black text-xs">
+                                {initials}
+                            </div>
+                        )}
                     </div>
                     <div className="min-w-0 flex-1">
                         <p className="text-white text-xs font-bold truncate">{rider?.name}</p>
