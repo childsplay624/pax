@@ -35,15 +35,25 @@ export default function RiderLayout({ children }: { children: React.ReactNode })
                 || data.user.email?.split("@")[0]
                 || "Rider";
 
-            // Fetch avatar_url from riders table
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const { data: riderRow } = await (supabase as any)
-                .from("riders")
-                .select("avatar_url")
-                .eq("user_id", data.user.id)
-                .maybeSingle();
+            // Fetch avatar_url — gracefully handles missing column (migration not run yet)
+            let avatarUrl: string | undefined;
+            try {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const { data: riderRow, error } = await (supabase as any)
+                    .from("riders")
+                    .select("avatar_url")
+                    .eq("user_id", data.user.id)
+                    .maybeSingle();
 
-            setRider({ name, email: data.user.email ?? "", avatar_url: riderRow?.avatar_url ?? undefined });
+                if (!error && riderRow?.avatar_url) {
+                    // Strip any stale ?t= timestamp params and use raw URL
+                    avatarUrl = riderRow.avatar_url.split("?")[0];
+                }
+            } catch {
+                // Column may not exist yet — silently skip
+            }
+
+            setRider({ name, email: data.user.email ?? "", avatar_url: avatarUrl });
         });
     }, [router]);
 

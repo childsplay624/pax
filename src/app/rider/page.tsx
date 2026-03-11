@@ -8,6 +8,7 @@ import {
     ToggleLeft, ToggleRight, Loader2, Navigation,
     Clock, ChevronRight, Radio, Shield, Activity
 } from "lucide-react";
+import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import { setRiderStatus, getRiderStats } from "@/app/actions/rider";
 import { cn } from "@/lib/utils";
@@ -110,23 +111,47 @@ export default function RiderCockpitPage() {
                         {/* Avatar + Status Ring */}
                         <div className="relative flex-shrink-0">
                             <div className={cn(
-                                "w-24 h-24 rounded-[2rem] flex items-center justify-center text-white text-3xl font-black shadow-2xl border-4 transition-all duration-500",
+                                "w-24 h-24 rounded-[2rem] overflow-hidden shadow-2xl border-4 transition-all duration-500 flex items-center justify-center",
                                 isActive
-                                    ? "bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 border-emerald-500/30"
-                                    : "bg-gradient-to-br from-white/10 to-transparent border-white/10"
+                                    ? "border-emerald-500/40"
+                                    : "border-white/10"
                             )}>
                                 {loading ? (
-                                    <Loader2 className="w-10 h-10 animate-spin opacity-30" />
-                                ) : rider?.vehicle_type === "bike" ? (
-                                    <Bike className="w-12 h-12" />
+                                    <div className="w-full h-full bg-white/5 flex items-center justify-center">
+                                        <Loader2 className="w-10 h-10 animate-spin opacity-30 text-white" />
+                                    </div>
+                                ) : rider?.avatar_url ? (
+                                    <Image
+                                        src={rider.avatar_url}
+                                        alt={rider.full_name ?? "Rider"}
+                                        width={96}
+                                        height={96}
+                                        className="w-full h-full object-cover"
+                                        unoptimized
+                                    />
                                 ) : (
-                                    <Truck className="w-12 h-12" />
+                                    <div className={cn(
+                                        "w-full h-full flex items-center justify-center text-white text-3xl font-black",
+                                        isActive
+                                            ? "bg-gradient-to-br from-emerald-500/20 to-emerald-600/10"
+                                            : "bg-gradient-to-br from-white/10 to-white/5"
+                                    )}>
+                                        {(rider?.full_name ?? "R").split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)}
+                                    </div>
                                 )}
                             </div>
+                            {/* Vehicle type badge */}
+                            {!loading && (
+                                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-full bg-[#0a0a0e] border border-white/10 flex items-center gap-1">
+                                    {rider?.vehicle_type === "bike"
+                                        ? <Bike className="w-3 h-3 text-white/40" />
+                                        : <Truck className="w-3 h-3 text-white/40" />}
+                                </div>
+                            )}
                             {/* Live indicator dot */}
                             <div className={cn(
-                                "absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-4 border-[#0a0a0e] shadow-lg transition-all",
-                                isActive ? "bg-emerald-500 shadow-emerald-500/50" : "bg-amber-400 shadow-amber-400/50"
+                                "absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-[#0a0a0e] shadow-lg transition-all",
+                                isActive ? "bg-emerald-500 shadow-emerald-500/50" : "bg-white/20"
                             )}>
                                 {isActive && <div className="absolute inset-0 bg-emerald-400 rounded-full animate-ping opacity-60" />}
                             </div>
