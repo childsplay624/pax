@@ -118,7 +118,7 @@ export default function UserManagementPage() {
                     <div className="flex items-center gap-3">
                         <div className="px-3 py-1 bg-red-brand/10 border border-red-brand/20 rounded-full flex items-center gap-2">
                             <div className="w-1.5 h-1.5 bg-red-brand rounded-full animate-pulse" />
-                            <span className="text-red-brand text-[9px] font-black uppercase tracking-[0.2em]">Operational Nexus</span>
+                            <span className="text-red-brand text-[9px] font-black uppercase tracking-[0.2em]">Operational Hub</span>
                         </div>
                         <span className="text-white/10 text-[9px] font-black uppercase tracking-[0.2em]">System Version 2.0.4</span>
                     </div>
@@ -257,7 +257,7 @@ export default function UserManagementPage() {
                                             </div>
                                             <div>
                                                 <div className="flex items-center gap-2">
-                                                    <p className="text-base font-black text-white tracking-tight">{p.full_name || "Nexus Node Undefined"}</p>
+                                                    <p className="text-base font-black text-white tracking-tight">{p.full_name || "Profile Undefined"}</p>
                                                     <ArrowUpRight className="w-3 h-3 text-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                                                 </div>
                                                 <p className="text-[10px] text-white/20 font-black uppercase tracking-widest mt-1.5 flex items-center gap-2">

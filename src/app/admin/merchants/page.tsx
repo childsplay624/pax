@@ -296,7 +296,7 @@ export default function AdminMerchantsPage() {
                                     <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/10 px-2">Entity Telemetry</h4>
                                     <div className="grid grid-cols-1 gap-4">
                                         {[
-                                            { icon: Building2, label: "Entity Designation", val: selected.company_name || "Nexus Private Node" },
+                                            { icon: Building2, label: "Entity Designation", val: selected.company_name || "Private Business Node" },
                                             { icon: Phone, label: "Relay Protocol", val: selected.phone || "NODE_TEL_MISSING" },
                                             { icon: Clock, label: "Registry Date", val: new Date(selected.created_at).toLocaleString() },
                                         ].map((item, i) => (

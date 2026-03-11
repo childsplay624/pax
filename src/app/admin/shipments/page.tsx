@@ -155,7 +155,7 @@ export default function AdminShipmentsPage() {
                 </div>
             </div>
 
-            {/* Status Filter Nexus */}
+            {/* Status Filter Hub */}
             <div className="flex flex-wrap gap-3">
                 {["all", ...STATUS_ORDER].map(s => (
                     <button key={s} onClick={() => setFilter(s)}
@@ -379,8 +379,8 @@ export default function AdminShipmentsPage() {
                                 {/* Entity Links */}
                                 <div className="space-y-6">
                                     {[
-                                        { label: "Sender Nexus", name: selected.sender_name, phone: selected.sender_phone, sub: "Source Node" },
-                                        { label: "Recipient Nexus", name: selected.recipient_name, phone: selected.recipient_phone, sub: "Termination Node" },
+                                        { label: "Sender Details", name: selected.sender_name, phone: selected.sender_phone, sub: "Source Node" },
+                                        { label: "Recipient Details", name: selected.recipient_name, phone: selected.recipient_phone, sub: "Termination Node" },
                                     ].map(p => (
                                         <div key={p.label} className="group p-8 rounded-[2rem] bg-white/[0.01] border border-white/5 hover:border-white/10 transition-all">
                                             <div className="flex items-center justify-between mb-4">

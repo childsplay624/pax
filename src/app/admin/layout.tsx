@@ -121,10 +121,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         </div>
                         <div>
                             <span className="text-2xl font-black text-white block tracking-tighter" style={{ fontFamily: "Space Grotesk, sans-serif" }}>
-                                NEXUS
+                                PAN
                             </span>
                             <span className="text-white/20 text-[9px] uppercase tracking-[0.4em] font-black flex items-center gap-1.5">
-                                <Activity className="w-2.5 h-2.5 text-red-brand" /> Hub v2.0
+                                <Activity className="w-2.5 h-2.5 text-red-brand" /> African Express
                             </span>
                         </div>
                     </Link>
