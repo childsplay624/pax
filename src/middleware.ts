@@ -22,15 +22,25 @@ export async function middleware(request: NextRequest) {
 
     const { data: { session } } = await supabase.auth.getSession();
 
-    // Protect /admin and /account routes — redirect to login if no session
+    // Protect /admin, /account and /dashboard routes
     if (
         request.nextUrl.pathname.startsWith("/admin") ||
-        request.nextUrl.pathname.startsWith("/account")
+        request.nextUrl.pathname.startsWith("/account") ||
+        request.nextUrl.pathname.startsWith("/dashboard")
     ) {
         if (!session) {
             const url = request.nextUrl.clone();
             url.pathname = "/login";
             url.searchParams.set("redirect", request.nextUrl.pathname);
+            return NextResponse.redirect(url);
+        }
+
+        const account_type = session.user.user_metadata?.account_type;
+
+        // Strict /admin protection
+        if (request.nextUrl.pathname.startsWith("/admin") && account_type !== "admin") {
+            const url = request.nextUrl.clone();
+            url.pathname = account_type === "business" ? "/dashboard" : "/account";
             return NextResponse.redirect(url);
         }
     }
@@ -39,5 +49,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-    matcher: ["/admin/:path*", "/account/:path*"],
+    matcher: ["/admin/:path*", "/account/:path*", "/dashboard/:path*"],
 };

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Calculator, Truck, Zap, Clock, CheckCircle2, Package } from "lucide-react";
 import Link from "next/link";
 import { NIGERIAN_STATES, calculatePrice } from "@/lib/pricing";
+import { supabase } from "@/lib/supabase";
 
 
 const SERVICE_TYPES = [
@@ -21,6 +22,13 @@ export default function PricingPage() {
     const [weight, setWeight] = useState(1);
     const [service, setService] = useState<"standard" | "express" | "same_day">("standard");
     const [calc, setCalc] = useState(false);
+    const [accountType, setAccountType] = useState<string | null>(null);
+
+    useEffect(() => {
+        supabase.auth.getUser().then(({ data }) => {
+            setAccountType(data.user?.user_metadata?.account_type ?? null);
+        });
+    }, []);
 
     const price = useMemo(() =>
         calc ? calculatePrice(origin, dest, weight, service) : null,
@@ -150,7 +158,7 @@ export default function PricingPage() {
                                         </div>
                                     </div>
 
-                                    <Link href={`/book?from=${encodeURIComponent(origin)}&to=${encodeURIComponent(dest)}&service=${service}&weight=${weight}`}
+                                    <Link href={`${accountType === "business" ? "/dashboard/book" : "/book"}?from=${encodeURIComponent(origin)}&to=${encodeURIComponent(dest)}&service=${service}&weight=${weight}`}
                                         className="w-full btn-magnetic bg-ink-900 hover:bg-ink-800 text-white py-4 rounded-2xl font-bold text-base transition-colors flex items-center justify-center gap-2">
                                         Book This Shipment <ArrowRight className="w-4 h-4" />
                                     </Link>

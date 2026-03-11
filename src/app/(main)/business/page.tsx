@@ -1,9 +1,10 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
-import { BarChart3, Shield, Layers, Cpu, Zap, Database, TrendingUp, Package, ArrowRight, Search, Bell } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useState, useTransition } from "react";
+import { BarChart3, Shield, Layers, Cpu, Zap, Database, TrendingUp, Package, ArrowRight, Search, Bell, CheckCircle2, Building2, User, Mail, Phone, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { submitBusinessInquiry } from "@/app/actions/shipments";
 
 /* ── Animated bar chart (red tones) ─────────────────────────── */
 const AnimatedChart = () => {
@@ -180,6 +181,28 @@ export default function BusinessPage() {
         { icon: BarChart3, title: "Financial Analytics", desc: "Cost-centre reporting, zone-level invoicing, and exportable P&L dashboards per division." },
     ];
 
+    /* ── Inquiry form state ── */
+    const [form, setForm] = useState({ company_name: "", contact_name: "", email: "", phone: "", daily_volume: "", message: "" });
+    const [success, setSuccess] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [isPending, start] = useTransition();
+
+    const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+        setForm(f => ({ ...f, [k]: e.target.value }));
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError(null);
+        start(async () => {
+            const res = await submitBusinessInquiry(form);
+            if (!res.success) { setError(res.error ?? "Something went wrong."); return; }
+            setSuccess(true);
+        });
+    };
+
+    const inputCls = "w-full bg-surface-50 border border-surface-200 rounded-2xl px-5 py-4 text-ink-900 font-medium placeholder-ink-300 outline-none focus:border-red-brand/50 focus:bg-white focus:ring-4 focus:ring-red-brand/8 transition-all text-[15px]";
+    const labelCls = "text-xs font-bold uppercase tracking-widest text-ink-400 block mb-2";
+
     return (
         <div className="bg-surface-0 pt-28 pb-24 overflow-hidden">
             <div className="max-w-7xl mx-auto px-6 lg:px-12">
@@ -192,7 +215,8 @@ export default function BusinessPage() {
                             Built for<br /><span className="gradient-text-red">The Corporate.</span>
                         </h1>
                         <p className="text-ink-400 text-lg leading-relaxed mb-12 max-w-lg">
-                            PAN African Express gives CTOs and logistics directors a single pane of glass to orchestrate global shipping operations with real-time intelligence.
+                            PAN African Express gives CTOs and logistics directors a single pane of glass to orchestrate
+                            Nigeria-wide shipping operations with real-time intelligence.
                         </p>
 
                         <div className="space-y-7">
@@ -211,9 +235,10 @@ export default function BusinessPage() {
                         </div>
 
                         <div className="mt-12 flex flex-wrap gap-4">
-                            <button className="btn-magnetic bg-red-brand hover:bg-red-dark text-white px-8 py-4 rounded-full font-bold flex items-center gap-2 shadow-lg shadow-red-brand/20 transition-colors">
+                            <a href="#inquiry"
+                                className="btn-magnetic bg-red-brand hover:bg-red-dark text-white px-8 py-4 rounded-full font-bold flex items-center gap-2 shadow-lg shadow-red-brand/20 transition-colors">
                                 Request Enterprise Demo <ArrowRight className="w-4 h-4" />
-                            </button>
+                            </a>
                             <button className="btn-magnetic bg-surface-100 text-ink-700 px-8 py-4 rounded-full font-bold border border-surface-200 hover:border-red-brand/30 hover:text-red-brand transition-colors">
                                 API Docs
                             </button>
@@ -269,7 +294,114 @@ export default function BusinessPage() {
                         ))}
                     </div>
                 </section>
+
+                {/* ── Enterprise Inquiry Form ── */}
+                <section id="inquiry" className="py-20 border-t border-surface-200">
+                    <div className="max-w-2xl mx-auto">
+                        <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
+                            <span className="text-red-brand text-[11px] font-bold uppercase tracking-[0.35em] block mb-4">Get In Touch</span>
+                            <h2 className="text-4xl md:text-5xl font-bold text-ink-900 tracking-tight mb-4" style={{ fontFamily: "Space Grotesk, sans-serif" }}>
+                                Request a Demo
+                            </h2>
+                            <p className="text-ink-400 text-lg">Tell us about your business. Our enterprise team responds within 4 hours on business days.</p>
+                        </motion.div>
+
+                        <AnimatePresence mode="wait">
+                            {success ? (
+                                <motion.div key="success" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
+                                    className="text-center py-12 card p-12">
+                                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
+                                        transition={{ type: "spring", stiffness: 260, damping: 20 }}
+                                        className="w-24 h-24 bg-emerald-50 border-2 border-emerald-200 rounded-full flex items-center justify-center mx-auto mb-6">
+                                        <CheckCircle2 className="w-12 h-12 text-emerald-500" />
+                                    </motion.div>
+                                    <h3 className="text-3xl font-bold text-ink-900 mb-3" style={{ fontFamily: "Space Grotesk, sans-serif" }}>Inquiry Sent!</h3>
+                                    <p className="text-ink-400">Our enterprise team will reach out within 4 business hours.</p>
+                                </motion.div>
+                            ) : (
+                                <motion.div key="form" className="card p-8">
+                                    <form onSubmit={handleSubmit} className="space-y-5">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                            <div>
+                                                <label className={labelCls}>Company Name</label>
+                                                <div className="relative">
+                                                    <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-300 pointer-events-none" />
+                                                    <input type="text" placeholder="Dangote Group" value={form.company_name} onChange={set("company_name")}
+                                                        className={cn(inputCls, "pl-11")} />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className={labelCls}>Contact Name <span className="text-red-brand">*</span></label>
+                                                <div className="relative">
+                                                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-300 pointer-events-none" />
+                                                    <input type="text" required placeholder="Emeka Okafor" value={form.contact_name} onChange={set("contact_name")}
+                                                        className={cn(inputCls, "pl-11")} />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                            <div>
+                                                <label className={labelCls}>Work Email <span className="text-red-brand">*</span></label>
+                                                <div className="relative">
+                                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-300 pointer-events-none" />
+                                                    <input type="email" required placeholder="emeka@company.com" value={form.email} onChange={set("email")}
+                                                        className={cn(inputCls, "pl-11")} />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className={labelCls}>Phone Number</label>
+                                                <div className="relative">
+                                                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-300 pointer-events-none" />
+                                                    <input type="tel" placeholder="+234 800 000 0000" value={form.phone} onChange={set("phone")}
+                                                        className={cn(inputCls, "pl-11")} />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className={labelCls}>Daily Shipment Volume</label>
+                                            <select value={form.daily_volume} onChange={set("daily_volume")} className={inputCls}>
+                                                <option value="">Select estimated volume</option>
+                                                <option value="1-50">1 – 50 shipments/day</option>
+                                                <option value="51-200">51 – 200 shipments/day</option>
+                                                <option value="201-1000">201 – 1,000 shipments/day</option>
+                                                <option value="1000+">1,000+ shipments/day</option>
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className={labelCls}>Message</label>
+                                            <div className="relative">
+                                                <MessageSquare className="absolute left-4 top-4 w-4 h-4 text-ink-300 pointer-events-none" />
+                                                <textarea rows={4} placeholder="Tell us about your logistics needs..." value={form.message} onChange={set("message")}
+                                                    className={cn(inputCls, "pl-11 resize-none")} />
+                                            </div>
+                                        </div>
+
+                                        {error && (
+                                            <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                                                className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
+                                                <div className="w-4 h-4 rounded-full bg-red-500 flex-shrink-0 mt-0.5" />
+                                                <p className="text-red-700 text-sm font-semibold">{error}</p>
+                                            </motion.div>
+                                        )}
+
+                                        <button type="submit" disabled={isPending}
+                                            className="w-full bg-red-brand hover:bg-red-dark disabled:opacity-60 text-white py-4 rounded-2xl font-bold text-[15px] transition-all shadow-lg shadow-red-brand/25 hover:shadow-red-brand/40 hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2">
+                                            {isPending
+                                                ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                                : <><span>Send Enterprise Inquiry</span><ArrowRight className="w-4 h-4" /></>}
+                                        </button>
+                                    </form>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                </section>
+
             </div>
         </div>
     );
 }
+

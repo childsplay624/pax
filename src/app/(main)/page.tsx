@@ -1,6 +1,7 @@
 "use client";
 
 import Hero from "@/components/Hero";
+import Link from "next/link";
 import ServiceCard from "@/components/ServiceCard";
 import StatsSection from "@/components/StatsSection";
 import GlobeSection from "@/components/GlobeSection";
@@ -199,9 +200,9 @@ export default function Home() {
             Join thousands of Nigerian businesses and individuals who trust PAN African Express for fast, reliable delivery across all 36 states.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-5">
-            <button className="btn-magnetic w-full sm:w-auto bg-white text-red-brand px-14 py-5 rounded-full font-bold text-lg shadow-xl hover:bg-surface-50 transition-colors">
+            <Link href="/register?type=business" className="btn-magnetic w-full sm:w-auto bg-white text-red-brand px-14 py-5 rounded-full font-bold text-lg shadow-xl hover:bg-surface-50 transition-colors flex items-center justify-center">
               Create Business Account
-            </button>
+            </Link>
             <button className="btn-magnetic w-full sm:w-auto bg-white/15 backdrop-blur border border-white/25 text-white px-14 py-5 rounded-full font-bold text-lg hover:bg-white/25 transition-colors">
               Request a Quote
             </button>

@@ -30,7 +30,8 @@ const ARCS = [
 function LoginForm() {
     const searchParams = useSearchParams();
     const nav = useRouter();
-    const redirect = searchParams.get("redirect") ?? "/";
+    // If middleware set an explicit redirect (e.g. user tried to access /dashboard), respect it
+    const explicitRedirect = searchParams.get("redirect");
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -44,7 +45,22 @@ function LoginForm() {
         start(async () => {
             const res = await signIn({ email, password });
             if (res.error) { setError(res.error); return; }
-            nav.push(redirect);
+
+            let target = explicitRedirect;
+
+            if (res.account_type === "admin") {
+                target = "/admin";
+            } else if (res.account_type === "business") {
+                // If no redirect or trying to go to public pages, send to dashboard
+                if (!target || target === "/account") target = "/dashboard";
+                // If they wanted to book, send to dashboard version
+                if (target === "/book") target = "/dashboard/book";
+            } else {
+                // Personal accounts: default to /account
+                if (!target || target === "/dashboard") target = "/account";
+            }
+
+            nav.push(target);
         });
     };
 

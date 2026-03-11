@@ -3,7 +3,11 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, ArrowRight, Package, CheckCircle2, Truck, MapPin, Shield, User, Mail, Lock } from "lucide-react";
+import {
+    Eye, EyeOff, ArrowRight, Package, CheckCircle2,
+    Truck, MapPin, Shield, User, Mail, Lock,
+    Building2, UserCircle2,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { signUp } from "@/app/actions/auth";
 
@@ -44,8 +48,28 @@ function StrengthBar({ password }: { password: string }) {
     );
 }
 
+type AccountType = "personal" | "business";
+
+const ACCOUNT_TYPES: { type: AccountType; label: string; sub: string; icon: typeof User; perks: string[] }[] = [
+    {
+        type: "personal",
+        label: "Personal",
+        sub: "For individuals & families",
+        icon: UserCircle2,
+        perks: ["Send parcels door-to-door", "Real-time tracking", "Insured deliveries"],
+    },
+    {
+        type: "business",
+        label: "Business",
+        sub: "For companies & merchants",
+        icon: Building2,
+        perks: ["Bulk shipping rates", "Business dashboard & analytics", "API access & integrations"],
+    },
+];
+
 export default function RegisterPage() {
     const nav = useRouter();
+    const [accountType, setAccountType] = useState<AccountType>("personal");
     const [fullName, setFullName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -59,17 +83,20 @@ export default function RegisterPage() {
         setError(null);
         if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
         start(async () => {
-            const res = await signUp({ email, password, full_name: fullName });
+            const res = await signUp({ email, password, full_name: fullName, account_type: accountType });
             if (res.error) { setError(res.error); return; }
             setSuccess(true);
             setTimeout(() => nav.push("/login"), 4500);
         });
     };
 
+    const inputCls = "w-full bg-surface-50 border border-surface-200 rounded-2xl pl-11 pr-5 py-4 text-ink-900 font-medium placeholder-ink-300 outline-none focus:border-red-brand/50 focus:bg-white focus:ring-4 focus:ring-red-brand/8 transition-all text-[15px]";
+    const labelCls = "text-xs font-bold uppercase tracking-widest text-ink-400";
+
     return (
         <div className="min-h-screen flex">
 
-            {/* ══ LEFT — Brand Panel ═══════════════════════════════════════ */}
+            {/* ══ LEFT — Brand Panel ══════════════════════════════════════════ */}
             <div className="hidden lg:flex lg:w-[52%] xl:w-[55%] bg-ink-900 relative overflow-hidden flex-col justify-between p-12 xl:p-16">
                 <div className="absolute inset-0 opacity-[0.035]"
                     style={{ backgroundImage: "linear-gradient(rgba(255,255,255,.4) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.4) 1px,transparent 1px)", backgroundSize: "48px 48px" }} />
@@ -144,10 +171,10 @@ export default function RegisterPage() {
                 </motion.div>
             </div>
 
-            {/* ══ RIGHT — Form Panel ════════════════════════════════════════ */}
+            {/* ══ RIGHT — Form Panel ════════════════════════════════════════════ */}
             <div className="flex-1 flex flex-col justify-center px-6 sm:px-12 lg:px-16 xl:px-24 bg-white overflow-y-auto">
                 <motion.div initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6 }}
-                    className="w-full max-w-md mx-auto py-16">
+                    className="w-full max-w-md mx-auto py-12">
 
                     {/* Mobile logo */}
                     <div className="flex items-center gap-2.5 mb-10 lg:hidden">
@@ -189,37 +216,90 @@ export default function RegisterPage() {
                                     <p className="text-ink-400">Start shipping across Nigeria today — it&apos;s free</p>
                                 </div>
 
+                                {/* ── Account Type Selector ── */}
+                                <div className="mb-6">
+                                    <p className={labelCls + " mb-3"}>Account Type</p>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {ACCOUNT_TYPES.map(({ type, label, sub, icon: Icon, perks }) => {
+                                            const active = accountType === type;
+                                            return (
+                                                <button key={type} type="button" onClick={() => setAccountType(type)}
+                                                    className={`relative text-left rounded-2xl border-2 p-4 transition-all duration-200 ${active
+                                                            ? "border-red-brand bg-red-brand/5 shadow-lg shadow-red-brand/10"
+                                                            : "border-surface-200 bg-surface-50 hover:border-red-brand/30 hover:bg-red-brand/[0.02]"
+                                                        }`}>
+                                                    {/* Active indicator */}
+                                                    {active && (
+                                                        <motion.div layoutId="account-type-indicator"
+                                                            className="absolute top-3 right-3 w-4 h-4 bg-red-brand rounded-full flex items-center justify-center">
+                                                            <div className="w-2 h-2 bg-white rounded-full" />
+                                                        </motion.div>
+                                                    )}
+                                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center mb-3 ${active ? "bg-red-brand text-white" : "bg-surface-200 text-ink-400"
+                                                        }`}>
+                                                        <Icon className="w-4 h-4" />
+                                                    </div>
+                                                    <p className={`font-bold text-sm ${active ? "text-red-brand" : "text-ink-700"}`}>{label}</p>
+                                                    <p className="text-ink-400 text-[11px] mt-0.5 mb-3 leading-relaxed">{sub}</p>
+                                                    <ul className="space-y-1">
+                                                        {perks.map(p => (
+                                                            <li key={p} className="flex items-start gap-1.5">
+                                                                <CheckCircle2 className={`w-3 h-3 mt-0.5 flex-shrink-0 ${active ? "text-red-brand" : "text-ink-300"}`} />
+                                                                <span className="text-[10px] text-ink-400 leading-relaxed">{p}</span>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    {accountType === "business" && (
+                                        <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+                                            className="mt-3 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                                            <Building2 className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                                            <p className="text-amber-700 text-[11px] font-medium">
+                                                Business accounts get access to the merchant dashboard, bulk rate and API keys after signup.
+                                            </p>
+                                        </motion.div>
+                                    )}
+                                </div>
+
                                 <form onSubmit={handleSubmit} className="space-y-5">
+
                                     {/* Full Name */}
                                     <div className="space-y-2">
-                                        <label className="text-xs font-bold uppercase tracking-widest text-ink-400">Full Name</label>
+                                        <label className={labelCls}>
+                                            {accountType === "business" ? "Contact Name" : "Full Name"}
+                                        </label>
                                         <div className="relative">
                                             <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-300 pointer-events-none" />
                                             <input type="text" required value={fullName} onChange={e => setFullName(e.target.value)}
-                                                placeholder="Emeka Okafor"
-                                                className="w-full bg-surface-50 border border-surface-200 rounded-2xl pl-11 pr-5 py-4 text-ink-900 font-medium placeholder-ink-300 outline-none focus:border-red-brand/50 focus:bg-white focus:ring-4 focus:ring-red-brand/8 transition-all text-[15px]" />
+                                                placeholder={accountType === "business" ? "Emeka Okafor (Contact Person)" : "Emeka Okafor"}
+                                                className={inputCls} />
                                         </div>
                                     </div>
 
                                     {/* Email */}
                                     <div className="space-y-2">
-                                        <label className="text-xs font-bold uppercase tracking-widest text-ink-400">Email Address</label>
+                                        <label className={labelCls}>
+                                            {accountType === "business" ? "Business Email" : "Email Address"}
+                                        </label>
                                         <div className="relative">
                                             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-300 pointer-events-none" />
                                             <input type="email" required autoComplete="email" value={email} onChange={e => setEmail(e.target.value)}
-                                                placeholder="you@example.com"
-                                                className="w-full bg-surface-50 border border-surface-200 rounded-2xl pl-11 pr-5 py-4 text-ink-900 font-medium placeholder-ink-300 outline-none focus:border-red-brand/50 focus:bg-white focus:ring-4 focus:ring-red-brand/8 transition-all text-[15px]" />
+                                                placeholder={accountType === "business" ? "you@company.com" : "you@example.com"}
+                                                className={inputCls} />
                                         </div>
                                     </div>
 
                                     {/* Password */}
                                     <div className="space-y-2">
-                                        <label className="text-xs font-bold uppercase tracking-widest text-ink-400">Password</label>
+                                        <label className={labelCls}>Password</label>
                                         <div className="relative">
                                             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-300 pointer-events-none" />
                                             <input type={show ? "text" : "password"} required value={password} onChange={e => setPassword(e.target.value)}
                                                 placeholder="Min. 6 characters"
-                                                className="w-full bg-surface-50 border border-surface-200 rounded-2xl pl-11 pr-14 py-4 text-ink-900 font-medium placeholder-ink-300 outline-none focus:border-red-brand/50 focus:bg-white focus:ring-4 focus:ring-red-brand/8 transition-all text-[15px]" />
+                                                className={inputCls.replace("pr-5", "pr-14")} />
                                             <button type="button" onClick={() => setShow(s => !s)}
                                                 className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-ink-300 hover:text-ink-600 rounded-lg hover:bg-surface-100 transition-all">
                                                 {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -241,7 +321,7 @@ export default function RegisterPage() {
                                         className="w-full bg-red-brand hover:bg-red-dark disabled:opacity-60 text-white py-4 rounded-2xl font-bold text-[15px] transition-all shadow-lg shadow-red-brand/25 hover:shadow-red-brand/40 hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2 mt-2">
                                         {isPending
                                             ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                            : <><span>Create Account</span><ArrowRight className="w-4 h-4" /></>}
+                                            : <><span>Create {accountType === "business" ? "Business" : ""} Account</span><ArrowRight className="w-4 h-4" /></>}
                                     </button>
                                 </form>
 
@@ -258,7 +338,10 @@ export default function RegisterPage() {
                                 </Link>
 
                                 <p className="text-center text-ink-300 text-xs mt-8 leading-relaxed">
-                                    By registering you agree to our <span className="text-ink-500 cursor-pointer hover:text-red-brand transition-colors">Terms</span> and <span className="text-ink-500 cursor-pointer hover:text-red-brand transition-colors">Privacy Policy</span>
+                                    By registering you agree to our{" "}
+                                    <span className="text-ink-500 cursor-pointer hover:text-red-brand transition-colors">Terms</span>{" "}
+                                    and{" "}
+                                    <span className="text-ink-500 cursor-pointer hover:text-red-brand transition-colors">Privacy Policy</span>
                                 </p>
                             </motion.div>
                         )}

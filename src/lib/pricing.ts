@@ -26,8 +26,17 @@ export function calculatePrice(
     originState: string,
     destState: string,
     weightKg: number,
-    serviceType: "standard" | "express" | "same_day"
-): { base: number; weight: number; service: number; total: number; eta: string } {
+    serviceType: "standard" | "express" | "same_day" | "bulk"
+): { 
+    base: number; 
+    weight: number; 
+    service: number; 
+    subtotal: number;
+    vat: number;
+    insurance: number;
+    total: number; 
+    eta: string 
+} {
     const oz = ZONES[originState] ?? "NC";
     const dz = ZONES[destState] ?? "NC";
 
@@ -39,19 +48,35 @@ export function calculatePrice(
         base = ([2500, 3500, 4500, 5500][Math.min(dist, 3)]) ?? 5500;
     }
 
-    const weightCharge = Math.max(0, weightKg - 1) * 500;
-    const svcMultiplier = serviceType === "express" ? 1.5 : serviceType === "same_day" ? 2.0 : 1.0;
-    const serviceCharge = base * (svcMultiplier - 1);
+    const weightCharge = Math.max(0, (Number(weightKg) || 1) - 1) * 500;
+    const svcMultiplier = 
+        serviceType === "express" ? 1.5 : 
+        serviceType === "same_day" ? 2.0 : 
+        serviceType === "bulk" ? 0.8 : 1.0;
+    
+    const serviceCharge = Math.round(base * (svcMultiplier - 1));
+    const subtotal = Math.round((base + weightCharge + serviceCharge));
+    
+    // Corporate Financials
+    const vat = Math.round(subtotal * 0.075); // 7.5% VAT
+    const insurance = Math.round(subtotal * 0.01); // 1% Insurance
+    const total = subtotal + vat + insurance;
 
     const etaMap: Record<string, string> = {
-        same_day: "Same day", express: "Next day", standard: "2–4 days",
+        same_day: "Same day (within 8hrs)", 
+        express: "Next day arrival", 
+        standard: "2–4 working days",
+        bulk: "3–7 working days"
     };
 
     return {
         base,
         weight: weightCharge,
-        service: Math.round(serviceCharge),
-        total: Math.round((base + weightCharge) * svcMultiplier),
+        service: serviceCharge,
+        subtotal,
+        vat,
+        insurance,
+        total,
         eta: etaMap[serviceType] ?? "3–5 days",
     };
 }

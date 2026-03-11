@@ -97,7 +97,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   phone        TEXT,
   state        TEXT,
   account_type TEXT        NOT NULL DEFAULT 'personal'
-                 CHECK (account_type IN ('personal','business')),
+                 CHECK (account_type IN ('personal', 'business', 'admin')),
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -105,8 +105,12 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, full_name)
-  VALUES (NEW.id, NEW.raw_user_meta_data->>'full_name')
+  INSERT INTO public.profiles (id, full_name, account_type)
+  VALUES (
+    NEW.id, 
+    NEW.raw_user_meta_data->>'full_name', 
+    COALESCE(NEW.raw_user_meta_data->>'account_type', 'personal')
+  )
   ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
 END;
@@ -144,13 +148,18 @@ CREATE POLICY "Anyone can submit a business inquiry"
   WITH CHECK (true);
 
 -- Profiles: users can only see and update their own
-CREATE POLICY "Users can view own profile"
+CREATE POLICY "Authenticated users can view all profiles"
   ON public.profiles FOR SELECT
-  USING (auth.uid() = id);
+  TO authenticated
+  USING (true);
 
 CREATE POLICY "Users can update own profile"
   ON public.profiles FOR UPDATE
-  USING (auth.uid() = id);
+  USING (auth.uid() = id OR (auth.jwt()->'user_metadata'->>'account_type' = 'admin'));
+
+CREATE POLICY "Admins can delete profiles"
+  ON public.profiles FOR DELETE
+  USING (auth.jwt()->'user_metadata'->>'account_type' = 'admin');
 
 -- ─── SEED DATA — demo shipment ───────────────────────────────
 INSERT INTO public.shipments (

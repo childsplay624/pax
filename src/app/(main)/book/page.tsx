@@ -4,11 +4,13 @@ import { useState, useTransition } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, ArrowLeft, CheckCircle2, Package, MapPin, User, Scale, Clipboard } from "lucide-react";
+import { ArrowRight, ArrowLeft, CheckCircle2, Package, MapPin, User, Scale, Clipboard, FileUp } from "lucide-react";
 import { createShipment } from "@/app/actions/bookings";
-import { NIGERIAN_STATES } from "@/lib/pricing";
-
+import { sendBookingConfirmationSMS } from "@/app/actions/notifications";
+import { calculatePrice, NIGERIAN_STATES } from "@/lib/pricing";
+import AddressAutocomplete from "@/components/AddressAutocomplete";
 import Link from "next/link";
+import BulkUploadModal from "@/components/BulkUploadModal";
 
 const STEPS = [
     { id: 1, label: "Route", icon: MapPin },
@@ -33,6 +35,13 @@ function BookingContent() {
     const [step, setStep] = useState(1);
     const [isPending, start] = useTransition();
     const [trackingId, setTrackingId] = useState<string | null>(null);
+    const [isBulkOpen, setIsBulkOpen] = useState(false);
+    const [bulkCount, setBulkCount] = useState<number | null>(null);
+
+    const handleBulkSuccess = (count: number) => {
+        setBulkCount(count);
+        // Reset view or show success
+    };
 
     const [form, setForm] = useState({
         // Route
@@ -66,11 +75,24 @@ function BookingContent() {
             });
             if (error) { alert(error); return; }
             setTrackingId(tracking_id);
+
+            // Fire SMS confirmation (non-blocking)
+            if (tracking_id && form.sender_phone) {
+                const price = calculatePrice(form.sender_state, form.recipient_state, Number(form.weight_kg), form.service_type);
+                sendBookingConfirmationSMS({
+                    senderPhone:  form.sender_phone,
+                    senderName:   form.sender_name || "Customer",
+                    trackingId:   tracking_id,
+                    origin:       form.origin_city,
+                    destination:  form.destination_city,
+                    eta:          price.eta,
+                }).catch(() => {/* SMS failure is non-fatal */});
+            }
         });
     };
 
     /* ── Success state ── */
-    if (trackingId) return (
+    if (trackingId || bulkCount) return (
         <div className="min-h-screen bg-surface-50 pt-32 pb-24 flex items-center justify-center px-6">
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
                 className="max-w-lg w-full card p-12 text-center relative">
@@ -78,18 +100,29 @@ function BookingContent() {
                 <div className="w-24 h-24 bg-red-brand/10 border border-red-brand/20 rounded-full flex items-center justify-center mx-auto mb-6">
                     <CheckCircle2 className="w-12 h-12 text-red-brand" />
                 </div>
-                <h2 className="text-4xl font-bold text-ink-900 mb-3" style={{ fontFamily: "Space Grotesk, sans-serif" }}>Booked!</h2>
-                <p className="text-ink-400 mb-6">Your shipment has been confirmed. Save your tracking ID:</p>
-                <div className="bg-ink-900 rounded-2xl px-8 py-5 mb-8">
-                    <p className="text-white/40 text-xs font-bold uppercase tracking-widest mb-2">Tracking ID</p>
-                    <p className="text-3xl font-bold text-white font-mono tracking-wider">{trackingId}</p>
-                </div>
+                <h2 className="text-4xl font-bold text-ink-900 mb-3" style={{ fontFamily: "Space Grotesk, sans-serif" }}>
+                    {bulkCount ? "Bulk Uploaded!" : "Booked!"}
+                </h2>
+                <p className="text-ink-400 mb-6">
+                    {bulkCount 
+                        ? `${bulkCount} parcels have been successfully registered. You can find them in your dashboard.`
+                        : "Your shipment has been confirmed. Save your tracking ID:"
+                    }
+                </p>
+                
+                {!bulkCount && (
+                    <div className="bg-ink-900 rounded-2xl px-8 py-5 mb-8">
+                        <p className="text-white/40 text-xs font-bold uppercase tracking-widest mb-2">Tracking ID</p>
+                        <p className="text-3xl font-bold text-white font-mono tracking-wider">{trackingId}</p>
+                    </div>
+                )}
+
                 <div className="flex gap-3">
-                    <Link href={`/tracking?id=${trackingId}`}
+                    <Link href="/dashboard/shipments"
                         className="flex-1 bg-red-brand hover:bg-red-dark text-white py-4 rounded-2xl font-bold text-center transition-colors">
-                        Track Shipment
+                        View Shipments
                     </Link>
-                    <button onClick={() => { setTrackingId(null); setStep(1); setForm(f => ({ ...f, sender_name: "", sender_phone: "", sender_address: "", recipient_name: "", recipient_phone: "", recipient_address: "", declared_value: 0, special_instructions: "" })); }}
+                    <button onClick={() => { setTrackingId(null); setBulkCount(null); setStep(1); }}
                         className="flex-1 bg-surface-50 border border-surface-200 text-ink-700 py-4 rounded-2xl font-bold hover:bg-surface-100 transition-colors">
                         Book Another
                     </button>
@@ -101,12 +134,25 @@ function BookingContent() {
     return (
         <div className="min-h-screen bg-surface-50 pt-32 pb-24">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_50%_0%,rgba(220,38,38,0.05),transparent)] pointer-events-none" />
+            
+            <BulkUploadModal 
+                isOpen={isBulkOpen} 
+                onClose={() => setIsBulkOpen(false)} 
+                onSuccess={handleBulkSuccess} 
+            />
 
             <div className="relative z-10 max-w-2xl mx-auto px-6 lg:px-12">
 
                 {/* Header */}
                 <div className="text-center mb-12">
-                    <span className="text-red-brand text-[11px] font-bold uppercase tracking-[0.35em] block mb-4">Ship Now</span>
+                    <div className="flex items-center justify-center gap-3 mb-4">
+                        <span className="text-red-brand text-[11px] font-bold uppercase tracking-[0.35em]">Ship Now</span>
+                        <div className="w-1 h-1 rounded-full bg-red-brand/30" />
+                        <button onClick={() => setIsBulkOpen(true)}
+                            className="text-ink-600 hover:text-red-brand text-[11px] font-black uppercase tracking-[0.2em] transition-colors flex items-center gap-1.5 px-3 py-1 bg-white border border-gray-100 rounded-full shadow-sm">
+                            <FileUp className="w-3 h-3" /> Bulk Upload CSV
+                        </button>
+                    </div>
                     <h1 className="text-5xl md:text-7xl font-bold text-ink-900 tracking-tight mb-4" style={{ fontFamily: "Space Grotesk, sans-serif" }}>
                         Book a <span className="gradient-text-red">Shipment</span>
                     </h1>
@@ -168,7 +214,13 @@ function BookingContent() {
                                 <h2 className="text-2xl font-bold text-ink-900 mb-6" style={{ fontFamily: "Space Grotesk, sans-serif" }}>Sender Details</h2>
                                 <Field label="Full Name"><input value={form.sender_name} onChange={e => set("sender_name", e.target.value)} placeholder="Emeka Okafor" className={inputCls} /></Field>
                                 <Field label="Phone Number"><input value={form.sender_phone} onChange={e => set("sender_phone", e.target.value)} placeholder="+234 800 000 0000" className={inputCls} /></Field>
-                                <Field label="Pickup Address"><input value={form.sender_address} onChange={e => set("sender_address", e.target.value)} placeholder="14 Adeola Odeku St, Victoria Island" className={inputCls} /></Field>
+                                <Field label="Pickup Address">
+                                    <AddressAutocomplete
+                                        value={form.sender_address}
+                                        onChange={v => set("sender_address", v)}
+                                        placeholder="14 Adeola Odeku St, Victoria Island"
+                                    />
+                                </Field>
                             </motion.div>
                         )}
 
@@ -178,7 +230,13 @@ function BookingContent() {
                                 <h2 className="text-2xl font-bold text-ink-900 mb-6" style={{ fontFamily: "Space Grotesk, sans-serif" }}>Recipient Details</h2>
                                 <Field label="Full Name"><input value={form.recipient_name} onChange={e => set("recipient_name", e.target.value)} placeholder="Amaka Williams" className={inputCls} /></Field>
                                 <Field label="Phone Number"><input value={form.recipient_phone} onChange={e => set("recipient_phone", e.target.value)} placeholder="+234 800 000 0000" className={inputCls} /></Field>
-                                <Field label="Delivery Address"><input value={form.recipient_address} onChange={e => set("recipient_address", e.target.value)} placeholder="22 Maitama Close, Garki, Abuja" className={inputCls} /></Field>
+                                <Field label="Delivery Address">
+                                    <AddressAutocomplete
+                                        value={form.recipient_address}
+                                        onChange={v => set("recipient_address", v)}
+                                        placeholder="22 Maitama Close, Garki, Abuja"
+                                    />
+                                </Field>
                             </motion.div>
                         )}
 

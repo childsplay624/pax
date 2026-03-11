@@ -69,40 +69,73 @@ const ProgressBar = ({ events }: { events: TrackingEvent[] }) => {
     );
 };
 
-/* ── Nigeria route map ───────────────────────────────────────── */
-const RouteMap = ({ origin, dest }: { origin: string; dest: string }) => (
-    <div className="relative w-full h-full bg-ink-900 flex items-center justify-center overflow-hidden rounded-2xl">
-        <svg className="absolute inset-0 w-full h-full opacity-[0.07]" viewBox="0 0 400 260" preserveAspectRatio="none">
-            {Array.from({ length: 9 }).map((_, i) => <line key={`v${i}`} x1={(i / 8) * 400} y1={0} x2={(i / 8) * 400} y2={260} stroke="white" strokeWidth="0.5" />)}
-            {Array.from({ length: 7 }).map((_, i) => <line key={`h${i}`} x1={0} y1={(i / 6) * 260} x2={400} y2={(i / 6) * 260} stroke="white" strokeWidth="0.5" />)}
-        </svg>
-        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 260" preserveAspectRatio="none">
-            <path d="M 60,200 Q 130,100 190,145" fill="none" stroke="#dc2626" strokeWidth="2" />
-            <path d="M 190,145 Q 250,80 340,90" fill="none" stroke="#dc2626" strokeWidth="2" strokeDasharray="8 5" opacity="0.5">
-                <animate attributeName="stroke-dashoffset" values="0;-26" dur="1.2s" repeatCount="indefinite" calcMode="linear" />
-            </path>
-            <circle cx="60" cy="200" r="6" fill="#dc2626" /><circle cx="60" cy="200" r="12" fill="rgba(220,38,38,0.15)" />
-            <circle cx="190" cy="145" r="5" fill="#dc2626">
-                <animate attributeName="r" values="5;10;5" dur="2s" repeatCount="indefinite" />
-                <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite" />
-            </circle>
-            <circle cx="190" cy="145" r="3.5" fill="white" />
-            <circle cx="340" cy="90" r="6" fill="rgba(220,38,38,0.3)" stroke="#dc2626" strokeWidth="1.5" />
-            <circle cx="340" cy="90" r="2.5" fill="#dc2626" />
-        </svg>
-        <div className="absolute bottom-3 left-4 text-[9px] font-bold text-white/50 uppercase tracking-widest">{origin}</div>
-        <div className="absolute top-[54%] left-[46%] text-[9px] font-bold text-red-400 uppercase tracking-widest -translate-x-1/2 -translate-y-1/2">Via Ibadan ●</div>
-        <div className="absolute top-[32%] right-6 text-[9px] font-bold text-white/50 uppercase tracking-widest">{dest}</div>
-        <motion.div className="absolute rounded-full opacity-30"
-            style={{ width: 120, height: 120, left: "calc(47% - 60px)", top: "calc(54% - 60px)", background: "conic-gradient(from 0deg,rgba(220,38,38,0) 0%,rgba(220,38,38,0.25) 15%,rgba(220,38,38,0) 25%)" }}
-            animate={{ rotate: 360 }} transition={{ duration: 4, ease: "linear", repeat: Infinity }} />
-        <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-2.5 bg-black/40 backdrop-blur-sm border-b border-white/[0.06]">
-            <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-red-400">PAX Live Route</span>
-            <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-red-brand animate-pulse" /><span className="text-[9px] font-semibold text-white/50">{origin} → {dest}</span></div>
-            <Wifi className="w-3 h-3 text-white/30" />
+/* ── Route Map — real Google Maps if key is set, SVG fallback ── */
+const RouteMap = ({ origin, dest }: { origin: string; dest: string }) => {
+    const MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
+
+    if (MAPS_KEY && origin && dest) {
+        const params = new URLSearchParams({
+            key: MAPS_KEY,
+            origin: `${origin}, Nigeria`,
+            destination: `${dest}, Nigeria`,
+            mode: "driving",
+            maptype: "roadmap",
+        });
+        return (
+            <div className="relative w-full h-full rounded-2xl overflow-hidden">
+                <iframe
+                    title="Route Map"
+                    width="100%"
+                    height="100%"
+                    style={{ border: 0, filter: "invert(90%) hue-rotate(190deg) contrast(0.85)" }}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    src={`https://www.google.com/maps/embed/v1/directions?${params.toString()}`}
+                />
+                <div className="absolute top-2 left-3 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-red-brand animate-pulse" />
+                    <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-red-400">PAX Live Route</span>
+                </div>
+            </div>
+        );
+    }
+
+    /* ── SVG fallback (no key needed) ─────────────────────────── */
+    return (
+        <div className="relative w-full h-full bg-ink-900 flex items-center justify-center overflow-hidden rounded-2xl">
+            <svg className="absolute inset-0 w-full h-full opacity-[0.07]" viewBox="0 0 400 260" preserveAspectRatio="none">
+                {Array.from({ length: 9 }).map((_, i) => <line key={`v${i}`} x1={(i / 8) * 400} y1={0} x2={(i / 8) * 400} y2={260} stroke="white" strokeWidth="0.5" />)}
+                {Array.from({ length: 7 }).map((_, i) => <line key={`h${i}`} x1={0} y1={(i / 6) * 260} x2={400} y2={(i / 6) * 260} stroke="white" strokeWidth="0.5" />)}
+            </svg>
+            <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 260" preserveAspectRatio="none">
+                <path d="M 60,200 Q 130,100 190,145" fill="none" stroke="#dc2626" strokeWidth="2" />
+                <path d="M 190,145 Q 250,80 340,90" fill="none" stroke="#dc2626" strokeWidth="2" strokeDasharray="8 5" opacity="0.5">
+                    <animate attributeName="stroke-dashoffset" values="0;-26" dur="1.2s" repeatCount="indefinite" calcMode="linear" />
+                </path>
+                <circle cx="60" cy="200" r="6" fill="#dc2626" /><circle cx="60" cy="200" r="12" fill="rgba(220,38,38,0.15)" />
+                <circle cx="190" cy="145" r="5" fill="#dc2626">
+                    <animate attributeName="r" values="5;10;5" dur="2s" repeatCount="indefinite" />
+                    <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite" />
+                </circle>
+                <circle cx="190" cy="145" r="3.5" fill="white" />
+                <circle cx="340" cy="90" r="6" fill="rgba(220,38,38,0.3)" stroke="#dc2626" strokeWidth="1.5" />
+                <circle cx="340" cy="90" r="2.5" fill="#dc2626" />
+            </svg>
+            <div className="absolute bottom-3 left-4 text-[9px] font-bold text-white/50 uppercase tracking-widest">{origin}</div>
+            <div className="absolute top-[54%] left-[46%] text-[9px] font-bold text-red-400 uppercase tracking-widest -translate-x-1/2 -translate-y-1/2">Via Hub ●</div>
+            <div className="absolute top-[32%] right-6 text-[9px] font-bold text-white/50 uppercase tracking-widest">{dest}</div>
+            <motion.div className="absolute rounded-full opacity-30"
+                style={{ width: 120, height: 120, left: "calc(47% - 60px)", top: "calc(54% - 60px)", background: "conic-gradient(from 0deg,rgba(220,38,38,0) 0%,rgba(220,38,38,0.25) 15%,rgba(220,38,38,0) 25%)" }}
+                animate={{ rotate: 360 }} transition={{ duration: 4, ease: "linear", repeat: Infinity }} />
+            <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-2.5 bg-black/40 backdrop-blur-sm border-b border-white/[0.06]">
+                <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-red-400">PAX Live Route</span>
+                <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-red-brand animate-pulse" /><span className="text-[9px] font-semibold text-white/50">{origin} → {dest}</span></div>
+                <Wifi className="w-3 h-3 text-white/30" />
+            </div>
         </div>
-    </div>
-);
+    );
+};
+
 
 /* ── Skeleton ─────────────────────────────────────────────────  */
 const Skeleton = () => (

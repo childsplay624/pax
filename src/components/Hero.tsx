@@ -1,9 +1,11 @@
 "use client";
 
 import { motion, useScroll, useTransform } from "framer-motion";
-import { useRef } from "react";
+import Link from "next/link";
+import { useRef, useState, useEffect } from "react";
 import { Package, MapPin, Shield, ArrowRight } from "lucide-react";
 import TrackingInput from "./TrackingInput";
+import { supabase } from "@/lib/supabase";
 
 /* ── Animated flight paths (Nigeria-scale) ───────────────────── */
 const FlightPaths = () => (
@@ -46,7 +48,7 @@ const line2 = ["Delivered", "Across", "Nigeria."];
 
 const WordReveal = () => {
     const container = { hidden: {}, visible: { transition: { staggerChildren: 0.1, delayChildren: 0.3 } } };
-    const word = { hidden: { y: "110%", opacity: 0 }, visible: { y: "0%", opacity: 1, transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] } } };
+    const word = { hidden: { y: "110%", opacity: 0 }, visible: { y: "0%", opacity: 1, transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] } } };
     return (
         <motion.div variants={container} initial="hidden" animate="visible">
             <div className="overflow-hidden">
@@ -101,6 +103,13 @@ const Hero = ({ imageUrl }: { imageUrl: string }) => {
     const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
     const bgY = useTransform(scrollYProgress, [0, 1], ["0%", "22%"]);
     const bgScale = useTransform(scrollYProgress, [0, 1], [1.05, 1.15]);
+    const [accountType, setAccountType] = useState<string | null>(null);
+
+    useEffect(() => {
+        supabase.auth.getUser().then(({ data }) => {
+            setAccountType(data.user?.user_metadata?.account_type ?? null);
+        });
+    }, []);
 
     return (
         <section ref={ref} className="relative w-full min-h-screen flex items-center pt-28 overflow-hidden">
@@ -152,12 +161,12 @@ const Hero = ({ imageUrl }: { imageUrl: string }) => {
 
                 {/* CTA row */}
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.4 }} className="mt-8 flex flex-wrap gap-4">
-                    <button className="btn-magnetic bg-red-brand hover:bg-red-dark text-white px-8 py-3.5 rounded-full font-bold text-sm flex items-center gap-2 shadow-lg shadow-red-brand/30 transition-colors">
+                    <Link href={accountType === "business" ? "/dashboard/book" : "/book"} className="btn-magnetic bg-red-brand hover:bg-red-dark text-white px-8 py-3.5 rounded-full font-bold text-sm flex items-center gap-2 shadow-lg shadow-red-brand/30 transition-colors">
                         Send a Parcel <ArrowRight className="w-4 h-4" />
-                    </button>
-                    <button className="btn-magnetic bg-white/10 backdrop-blur-md border border-white/15 text-white px-8 py-3.5 rounded-full font-bold text-sm hover:bg-white/20 transition-colors">
+                    </Link>
+                    <Link href="/business" className="btn-magnetic bg-white/10 backdrop-blur-md border border-white/15 text-white px-8 py-3.5 rounded-full font-bold text-sm hover:bg-white/20 transition-colors">
                         Business Shipping
-                    </button>
+                    </Link>
                 </motion.div>
 
                 {/* Floating badges */}
