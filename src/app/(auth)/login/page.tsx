@@ -48,7 +48,9 @@ function LoginForm() {
 
             let target = explicitRedirect;
 
-            if (res.account_type === "admin") {
+            if (res.account_type === "rider") {
+                target = "/rider";
+            } else if (res.account_type === "admin") {
                 target = "/admin";
             } else if (res.account_type === "business") {
                 // If no redirect or trying to go to public pages, send to dashboard
@@ -60,7 +62,7 @@ function LoginForm() {
                 if (!target || target === "/dashboard") target = "/account";
             }
 
-            nav.push(target);
+            nav.push(target!);
         });
     };
 

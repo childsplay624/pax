@@ -47,7 +47,7 @@ export async function signUp(data: {
 export async function signIn(data: {
     email: string;
     password: string;
-}): Promise<{ error: string | null; account_type: "personal" | "business" | "admin" | null }> {
+}): Promise<{ error: string | null; account_type: "personal" | "business" | "admin" | "rider" | null }> {
     const supabase = await createServerSupabaseClient();
 
     const { data: authData, error } = await supabase.auth.signInWithPassword({
@@ -57,22 +57,38 @@ export async function signIn(data: {
 
     if (error) return { error: error.message, account_type: null };
 
-    // Fetch account_type from profiles — gracefully handles missing table
+    if (!authData.user) return { error: "No user returned", account_type: null };
+
+    const userId = authData.user.id;
+
+    // ── 1. Check riders table first (highest priority check) ────
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: rider } = await (supabase as any)
+            .from("riders")
+            .select("id")
+            .eq("user_id", userId)
+            .maybeSingle();
+
+        if (rider) return { error: null, account_type: "rider" };
+    } catch {
+        // riders table may not exist yet — safe to skip
+    }
+
+    // ── 2. Check profiles for admin / business ───────────────
     let account_type: "personal" | "business" | "admin" = "personal";
     try {
-        if (authData.user) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const { data: profile } = await (supabase as any)
-                .from("profiles")
-                .select("account_type")
-                .eq("id", authData.user.id)
-                .single() as { data: { account_type: string } | null };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: profile } = await (supabase as any)
+            .from("profiles")
+            .select("account_type")
+            .eq("id", userId)
+            .single() as { data: { account_type: string } | null };
 
-            if (profile?.account_type === "business") account_type = "business";
-            else if (profile?.account_type === "admin") account_type = "admin";
-        }
+        if (profile?.account_type === "business") account_type = "business";
+        else if (profile?.account_type === "admin") account_type = "admin";
     } catch {
-        // profiles table may not exist yet (migration pending) — fall back to personal
+        // profiles table may not exist yet — fall back to personal
     }
 
     return { error: null, account_type };
