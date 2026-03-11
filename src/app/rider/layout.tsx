@@ -9,6 +9,7 @@ import {
     Radio, Activity
 } from "lucide-react";
 import Image from "next/image";
+import Head from "next/head";
 import { supabase } from "@/lib/supabase";
 import { signOut } from "@/app/actions/auth";
 import { motion, AnimatePresence } from "framer-motion";
@@ -47,6 +48,16 @@ export default function RiderLayout({ children }: { children: React.ReactNode })
     }, [router]);
 
     useEffect(() => { setOpen(false); }, [pathname]);
+
+    // ── Register Service Worker for PWA ────────────────────────
+    useEffect(() => {
+        if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+            navigator.serviceWorker
+                .register("/rider-sw.js", { scope: "/rider" })
+                .then(reg => console.log("[PAX Rider PWA] SW registered:", reg.scope))
+                .catch(err => console.warn("[PAX Rider PWA] SW registration failed:", err));
+        }
+    }, []);
 
     const isActive = (href: string) =>
         href === "/rider" ? pathname === "/rider" : pathname.startsWith(href);
@@ -140,54 +151,74 @@ export default function RiderLayout({ children }: { children: React.ReactNode })
     );
 
     return (
-        <div className="min-h-screen bg-[#0a0a0e] flex">
+        <>
+            {/* ── PWA Head Tags ── */}
+            <Head>
+                <link rel="manifest" href="/rider-manifest.json" />
+                <meta name="theme-color" content="#eb0000" />
+                <meta name="mobile-web-app-capable" content="yes" />
+                <meta name="apple-mobile-web-app-capable" content="yes" />
+                <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+                <meta name="apple-mobile-web-app-title" content="PAX Rider" />
+                <link rel="apple-touch-icon" href="/rider-icon-192.png" />
+                <meta name="application-name" content="PAX Rider" />
+                <meta name="msapplication-TileColor" content="#eb0000" />
+                <meta name="msapplication-TileImage" content="/rider-icon-192.png" />
+                <meta
+                    name="viewport"
+                    content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=5, viewport-fit=cover"
+                />
+            </Head>
 
-            {/* ── Desktop Sidebar ── */}
-            <aside className="hidden lg:flex flex-col w-64 bg-[#0d0d12]/95 backdrop-blur-3xl border-r border-white/[0.06] fixed inset-y-0 left-0 z-40">
-                <SidebarContent />
-            </aside>
+            <div className="min-h-screen bg-[#0a0a0e] flex">
 
-            {/* ── Mobile Top Bar ── */}
-            <div className="lg:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-[#0d0d12]/95 backdrop-blur-xl border-b border-white/[0.06] flex items-center justify-between px-5">
-                <Link href="/rider" className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 bg-[#eb0000] rounded-xl flex items-center justify-center shadow-lg shadow-red-500/30">
-                        <Radio className="w-4 h-4 text-white" />
-                    </div>
-                    <span className="text-white font-black text-sm" style={{ fontFamily: "Space Grotesk, sans-serif" }}>PAX Rider</span>
-                </Link>
-                <button
-                    onClick={() => setOpen(!open)}
-                    className="text-white/50 hover:text-white transition-colors p-1"
-                >
-                    {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-                </button>
+                {/* ── Desktop Sidebar ── */}
+                <aside className="hidden lg:flex flex-col w-64 bg-[#0d0d12]/95 backdrop-blur-3xl border-r border-white/[0.06] fixed inset-y-0 left-0 z-40">
+                    <SidebarContent />
+                </aside>
+
+                {/* ── Mobile Top Bar ── */}
+                <div className="lg:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-[#0d0d12]/95 backdrop-blur-xl border-b border-white/[0.06] flex items-center justify-between px-5">
+                    <Link href="/rider" className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 bg-[#eb0000] rounded-xl flex items-center justify-center shadow-lg shadow-red-500/30">
+                            <Radio className="w-4 h-4 text-white" />
+                        </div>
+                        <span className="text-white font-black text-sm" style={{ fontFamily: "Space Grotesk, sans-serif" }}>PAX Rider</span>
+                    </Link>
+                    <button
+                        onClick={() => setOpen(!open)}
+                        className="text-white/50 hover:text-white transition-colors p-1"
+                    >
+                        {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                    </button>
+                </div>
+
+                {/* ── Mobile Slide-over (from left, like sidebar) ── */}
+                <AnimatePresence>
+                    {open && (
+                        <>
+                            <motion.div
+                                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                                className="lg:hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm"
+                                onClick={() => setOpen(false)}
+                            />
+                            <motion.aside
+                                initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }}
+                                transition={{ type: "spring", stiffness: 320, damping: 30 }}
+                                className="lg:hidden fixed inset-y-0 left-0 z-50 w-64 bg-[#0d0d12] border-r border-white/[0.06] flex flex-col pt-14"
+                            >
+                                <SidebarContent />
+                            </motion.aside>
+                        </>
+                    )}
+                </AnimatePresence>
+
+                {/* ── Main Content ── */}
+                <main className="flex-1 lg:ml-64 pt-14 lg:pt-0 min-h-screen overflow-y-auto">
+                    {children}
+                </main>
+
             </div>
-
-            {/* ── Mobile Slide-over (from left, like sidebar) ── */}
-            <AnimatePresence>
-                {open && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="lg:hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm"
-                            onClick={() => setOpen(false)}
-                        />
-                        <motion.aside
-                            initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }}
-                            transition={{ type: "spring", stiffness: 320, damping: 30 }}
-                            className="lg:hidden fixed inset-y-0 left-0 z-50 w-64 bg-[#0d0d12] border-r border-white/[0.06] flex flex-col pt-14"
-                        >
-                            <SidebarContent />
-                        </motion.aside>
-                    </>
-                )}
-            </AnimatePresence>
-
-            {/* ── Main Content ── */}
-            <main className="flex-1 lg:ml-64 pt-14 lg:pt-0 min-h-screen overflow-y-auto">
-                {children}
-            </main>
-
-        </div>
+        </>
     );
 }

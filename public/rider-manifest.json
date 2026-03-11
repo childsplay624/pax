@@ -1,0 +1,60 @@
+{
+    "name": "PAX Rider Hub",
+    "short_name": "PAX Rider",
+    "description": "PAN African Express — Rider Operations Dashboard. Manage dispatches, track deliveries and monitor performance.",
+    "start_url": "/rider",
+    "scope": "/rider",
+    "display": "standalone",
+    "orientation": "portrait-primary",
+    "theme_color": "#eb0000",
+    "background_color": "#0a0a0e",
+    "lang": "en",
+    "dir": "ltr",
+    "categories": [
+        "logistics",
+        "productivity",
+        "business"
+    ],
+    "icons": [
+        {
+            "src": "/rider-icon-192.png",
+            "type": "image/png",
+            "sizes": "192x192",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/rider-icon-512.png",
+            "type": "image/png",
+            "sizes": "512x512",
+            "purpose": "any maskable"
+        }
+    ],
+    "screenshots": [],
+    "shortcuts": [
+        {
+            "name": "Active Dispatch",
+            "short_name": "Dispatch",
+            "description": "View your active delivery assignments",
+            "url": "/rider/dispatch",
+            "icons": [
+                {
+                    "src": "/rider-icon-192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        },
+        {
+            "name": "Rider Cockpit",
+            "short_name": "Cockpit",
+            "description": "Go online and monitor your status",
+            "url": "/rider",
+            "icons": [
+                {
+                    "src": "/rider-icon-192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        }
+    ],
+    "prefer_related_applications": false
+}
