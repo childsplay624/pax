@@ -28,32 +28,42 @@ export default function RiderClientLayout({ children }: { children: React.ReactN
     const [open, setOpen] = useState(false);
 
     useEffect(() => {
-        supabase.auth.getUser().then(async ({ data }) => {
-            if (!data.user) { router.push("/login?redirect=/rider"); return; }
-            const name = (data.user.user_metadata?.full_name as string)
-                || data.user.email?.split("@")[0]
-                || "Rider";
-
-            // Fetch avatar_url — gracefully handles missing column (migration not run yet)
-            let avatarUrl: string | undefined;
+        const checkAuth = async () => {
             try {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const { data: riderRow, error } = await (supabase as any)
-                    .from("riders")
-                    .select("avatar_url")
-                    .eq("user_id", data.user.id)
-                    .maybeSingle();
-
-                if (!error && riderRow?.avatar_url) {
-                    // Strip any stale ?t= timestamp params and use raw URL
-                    avatarUrl = riderRow.avatar_url.split("?")[0];
+                const { data, error: authError } = await supabase.auth.getUser();
+                if (authError || !data.user) {
+                    router.push("/login?redirect=/rider");
+                    return;
                 }
-            } catch {
-                // Column may not exist yet — silently skip
-            }
 
-            setRider({ name, email: data.user.email ?? "", avatar_url: avatarUrl });
-        });
+                const name = (data.user.user_metadata?.full_name as string)
+                    || data.user.email?.split("@")[0]
+                    || "Rider";
+
+                // Fetch avatar_url — gracefully handles missing column (migration not run yet)
+                let avatarUrl: string | undefined;
+                try {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const { data: riderRow, error: dbError } = await (supabase as any)
+                        .from("riders")
+                        .select("avatar_url")
+                        .eq("user_id", data.user.id)
+                        .maybeSingle();
+
+                    if (!dbError && riderRow?.avatar_url) {
+                        avatarUrl = riderRow.avatar_url.split("?")[0];
+                    }
+                } catch (dbErr) {
+                    console.warn("[PAX Rider] Could not fetch avatar_url:", dbErr);
+                }
+
+                setRider({ name, email: data.user.email ?? "", avatar_url: avatarUrl });
+            } catch (err) {
+                console.warn("[PAX Rider Auth] Session sync interrupted (expected in multi-tab):", err);
+            }
+        };
+
+        checkAuth();
     }, [router]);
 
     useEffect(() => { setOpen(false); }, [pathname]);

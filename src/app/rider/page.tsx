@@ -30,21 +30,26 @@ export default function RiderCockpitPage() {
     useEffect(() => {
         const load = async () => {
             setLoading(true);
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) return;
 
-            const { data: riderData } = await (supabase as any)
-                .from("riders")
-                .select("*")
-                .eq("user_id", user.id)
-                .single();
+                const { data: riderData } = await (supabase as any)
+                    .from("riders")
+                    .select("*")
+                    .eq("user_id", user.id)
+                    .single();
 
-            if (riderData) {
-                setRider(riderData);
-                const s = await getRiderStats(riderData.id);
-                setStats(s);
+                if (riderData) {
+                    setRider(riderData);
+                    const s = await getRiderStats(riderData.id);
+                    setStats(s);
+                }
+            } catch (err) {
+                console.warn("[PAX Rider Cockpit] Sync interrupted:", err);
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
         };
 
         load();
