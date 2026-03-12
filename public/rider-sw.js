@@ -49,13 +49,20 @@ self.addEventListener("fetch", (event) => {
     // Skip non-GET requests
     if (request.method !== "GET") return;
 
+    // 🚨 ONLY intercept requests for our own origin or Supabase
+    // This prevents interference with browser extensions, dev tools, and external scripts
+    const isInternal = url.origin === self.location.origin;
+    const isSupabase = url.hostname.includes("supabase.co");
+
+    if (!isInternal && !isSupabase) return;
+
     // Skip Supabase auth/realtime (always live)
-    if (url.hostname.includes("supabase.co") && url.pathname.includes("/auth/")) return;
+    if (isSupabase && url.pathname.includes("/auth/")) return;
 
     // Network-first for rider pages and Supabase REST/Storage
     if (
         url.pathname.startsWith("/rider") ||
-        url.hostname.includes("supabase.co")
+        isSupabase
     ) {
         event.respondWith(
             fetch(request)
@@ -76,7 +83,7 @@ self.addEventListener("fetch", (event) => {
         return;
     }
 
-    // Cache-first for everything else (static assets, fonts)
+    // Cache-first for static assets (CSS, JS, Fonts, App Icons)
     event.respondWith(
         caches.match(request).then(
             (cached) => cached || fetch(request).catch(() => caches.match(OFFLINE_URL))
