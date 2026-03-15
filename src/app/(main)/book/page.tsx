@@ -68,25 +68,31 @@ function BookingContent() {
 
     const handleSubmit = () => {
         start(async () => {
-            const { tracking_id, error } = await createShipment({
+            const { tracking_id, checkout_url, error } = await createShipment({
                 ...form,
                 weight_kg: Number(form.weight_kg),
                 declared_value: Number(form.declared_value),
             });
             if (error) { alert(error); return; }
+
+            if (checkout_url) {
+                window.location.href = checkout_url;
+                return;
+            }
+
             setTrackingId(tracking_id);
 
             // Fire SMS confirmation (non-blocking)
             if (tracking_id && form.sender_phone) {
                 const price = calculatePrice(form.sender_state, form.recipient_state, Number(form.weight_kg), form.service_type);
                 sendBookingConfirmationSMS({
-                    senderPhone:  form.sender_phone,
-                    senderName:   form.sender_name || "Customer",
-                    trackingId:   tracking_id,
-                    origin:       form.origin_city,
-                    destination:  form.destination_city,
-                    eta:          price.eta,
-                }).catch(() => {/* SMS failure is non-fatal */});
+                    senderPhone: form.sender_phone,
+                    senderName: form.sender_name || "Customer",
+                    trackingId: tracking_id,
+                    origin: form.origin_city,
+                    destination: form.destination_city,
+                    eta: price.eta,
+                }).catch(() => {/* SMS failure is non-fatal */ });
             }
         });
     };
@@ -104,12 +110,12 @@ function BookingContent() {
                     {bulkCount ? "Bulk Uploaded!" : "Booked!"}
                 </h2>
                 <p className="text-ink-400 mb-6">
-                    {bulkCount 
+                    {bulkCount
                         ? `${bulkCount} parcels have been successfully registered. You can find them in your dashboard.`
                         : "Your shipment has been confirmed. Save your tracking ID:"
                     }
                 </p>
-                
+
                 {!bulkCount && (
                     <div className="bg-ink-900 rounded-2xl px-8 py-5 mb-8">
                         <p className="text-white/40 text-xs font-bold uppercase tracking-widest mb-2">Tracking ID</p>
@@ -134,11 +140,11 @@ function BookingContent() {
     return (
         <div className="min-h-screen bg-surface-50 pt-32 pb-24">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_50%_0%,rgba(220,38,38,0.05),transparent)] pointer-events-none" />
-            
-            <BulkUploadModal 
-                isOpen={isBulkOpen} 
-                onClose={() => setIsBulkOpen(false)} 
-                onSuccess={handleBulkSuccess} 
+
+            <BulkUploadModal
+                isOpen={isBulkOpen}
+                onClose={() => setIsBulkOpen(false)}
+                onSuccess={handleBulkSuccess}
             />
 
             <div className="relative z-10 max-w-2xl mx-auto px-6 lg:px-12">

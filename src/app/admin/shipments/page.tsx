@@ -7,8 +7,7 @@ import {
     Truck, CheckCircle2, AlertCircle, Bell, Clock, Eye,
     Printer, ArrowUpRight, Shield, Activity, TrendingUp, Loader2
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
-import { updateShipmentStatus } from "@/app/actions/admin";
+import { updateShipmentStatus, getAdminShipments } from "@/app/actions/admin";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
@@ -70,10 +69,7 @@ export default function AdminShipmentsPage() {
 
     const load = async () => {
         setLoading(true);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let q = (supabase as any).from("shipments").select("*").order("created_at", { ascending: false });
-        if (filter !== "all") q = q.eq("status", filter);
-        const { data } = await q;
+        const data = await getAdminShipments(filter);
         setRows(data ?? []);
         setLoading(false);
     };

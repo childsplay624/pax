@@ -9,7 +9,6 @@ import {
     Clock, ChevronRight, Search, Filter, MoreHorizontal, Shield
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "@/lib/supabase";
 import { getAdminStats } from "@/app/actions/admin";
 import { cn } from "@/lib/utils";
 
@@ -43,14 +42,14 @@ export default function AdminDashboard() {
     useEffect(() => {
         async function load() {
             setLoading(true);
-            const [serverStats, { data: recentShipments }, { data: recentKYC }] = await Promise.all([
-                getAdminStats(),
-                (supabase as any).from("shipments").select("*").order("created_at", { ascending: false }).limit(6),
-                (supabase as any).from("profiles").select("*").eq("account_type", "business").eq("kyc_status", "pending").limit(4),
-            ]);
-            setStats(serverStats);
-            setShipments(recentShipments ?? []);
-            setKycRequests(recentKYC ?? []);
+            try {
+                const serverStats = await getAdminStats();
+                setStats(serverStats);
+                setShipments(serverStats.recentShipments ?? []);
+                setKycRequests(serverStats.recentKYC ?? []);
+            } catch (error) {
+                console.error("Failed to load admin stats:", error);
+            }
             setLoading(false);
         }
         load();

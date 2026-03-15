@@ -11,8 +11,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "@/lib/supabase";
-import { updateMerchantKYC } from "@/app/actions/admin";
+import { getProfiles, updateMerchantKYC } from "@/app/actions/admin";
 import { cn } from "@/lib/utils";
 
 interface Merchant {
@@ -38,12 +37,7 @@ function VerifyPageContent() {
 
     const load = async () => {
         setLoading(true);
-        const { data } = await (supabase as any)
-            .from("profiles")
-            .select("*")
-            .eq("account_type", "business")
-            .order("created_at", { ascending: false });
-
+        const data = await getProfiles("business");
         setMerchants(data || []);
 
         if (initialId && data) {

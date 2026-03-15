@@ -5,12 +5,12 @@ import { useState, useEffect, Suspense, useTransition } from "react";
 import {
     Search, Package, CheckCircle2, Clock, MapPin, Shield,
     Wifi, Radio, Phone, AlertCircle, ArrowRight, Zap,
-    RotateCcw, Truck, Star,
+    RotateCcw, Truck, Star, Navigation
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/lib/supabase";
 import type { Shipment, TrackingEvent } from "@/types/database";
+import { trackShipment } from "@/app/actions/tracking";
 
 /* ── Countdown hook ──────────────────────────────────────────── */
 const useCountdown = (etaStr: string | null) => {
@@ -70,10 +70,12 @@ const ProgressBar = ({ events }: { events: TrackingEvent[] }) => {
 };
 
 /* ── Route Map — real Google Maps if key is set, SVG fallback ── */
-const RouteMap = ({ origin, dest }: { origin: string; dest: string }) => {
+const RouteMap = ({ origin, dest, riderLat, riderLng }: { origin: string; dest: string; riderLat?: number; riderLng?: number }) => {
     const MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
 
     if (MAPS_KEY && origin && dest) {
+        // If we have rider coordinates, we could try to include them as a waypoint or use JS SDK.
+        // For the static Embed API, we'll just show the route.
         const params = new URLSearchParams({
             key: MAPS_KEY,
             origin: `${origin}, Nigeria`,
@@ -92,6 +94,15 @@ const RouteMap = ({ origin, dest }: { origin: string; dest: string }) => {
                     referrerPolicy="no-referrer-when-downgrade"
                     src={`https://www.google.com/maps/embed/v1/directions?${params.toString()}`}
                 />
+
+                {/* Live Rider Overlay if coords exist */}
+                {riderLat && riderLng && (
+                    <div className="absolute top-12 left-3 flex items-center gap-2 bg-emerald-500/90 backdrop-blur-md text-white px-3 py-1.5 rounded-full shadow-lg border border-emerald-400/30 animate-in fade-in slide-in-from-left-4 duration-500">
+                        <Navigation className="w-3.5 h-3.5 animate-pulse" />
+                        <span className="text-[10px] font-black uppercase tracking-wider">Rider is Live</span>
+                    </div>
+                )}
+
                 <div className="absolute top-2 left-3 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1">
                     <div className="w-1.5 h-1.5 rounded-full bg-red-brand animate-pulse" />
                     <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-red-400">PAX Live Route</span>
@@ -100,7 +111,7 @@ const RouteMap = ({ origin, dest }: { origin: string; dest: string }) => {
         );
     }
 
-    /* ── SVG fallback (no key needed) ─────────────────────────── */
+    /* ── SVG fallback ─────────────────────────────────────────── */
     return (
         <div className="relative w-full h-full bg-ink-900 flex items-center justify-center overflow-hidden rounded-2xl">
             <svg className="absolute inset-0 w-full h-full opacity-[0.07]" viewBox="0 0 400 260" preserveAspectRatio="none">
@@ -113,16 +124,28 @@ const RouteMap = ({ origin, dest }: { origin: string; dest: string }) => {
                     <animate attributeName="stroke-dashoffset" values="0;-26" dur="1.2s" repeatCount="indefinite" calcMode="linear" />
                 </path>
                 <circle cx="60" cy="200" r="6" fill="#dc2626" /><circle cx="60" cy="200" r="12" fill="rgba(220,38,38,0.15)" />
-                <circle cx="190" cy="145" r="5" fill="#dc2626">
-                    <animate attributeName="r" values="5;10;5" dur="2s" repeatCount="indefinite" />
-                    <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite" />
-                </circle>
+
+                {/* Dynamic Rider Dot for SVG */}
+                {riderLat && riderLng ? (
+                    <motion.g initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring" }}>
+                        <circle cx="210" cy="120" r="8" fill="#10b981" className="animate-pulse" />
+                        <circle cx="210" cy="120" r="4" fill="white" />
+                    </motion.g>
+                ) : (
+                    <circle cx="190" cy="145" r="5" fill="#dc2626">
+                        <animate attributeName="r" values="5;10;5" dur="2s" repeatCount="indefinite" />
+                        <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite" />
+                    </circle>
+                )}
+
                 <circle cx="190" cy="145" r="3.5" fill="white" />
                 <circle cx="340" cy="90" r="6" fill="rgba(220,38,38,0.3)" stroke="#dc2626" strokeWidth="1.5" />
                 <circle cx="340" cy="90" r="2.5" fill="#dc2626" />
             </svg>
             <div className="absolute bottom-3 left-4 text-[9px] font-bold text-white/50 uppercase tracking-widest">{origin}</div>
-            <div className="absolute top-[54%] left-[46%] text-[9px] font-bold text-red-400 uppercase tracking-widest -translate-x-1/2 -translate-y-1/2">Via Hub ●</div>
+            <div className="absolute top-[54%] left-[46%] text-[9px] font-bold text-red-400 uppercase tracking-widest -translate-x-1/2 -translate-y-1/2">
+                {riderLat ? "Rider Moving ●" : "Via Hub ●"}
+            </div>
             <div className="absolute top-[32%] right-6 text-[9px] font-bold text-white/50 uppercase tracking-widest">{dest}</div>
             <motion.div className="absolute rounded-full opacity-30"
                 style={{ width: 120, height: 120, left: "calc(47% - 60px)", top: "calc(54% - 60px)", background: "conic-gradient(from 0deg,rgba(220,38,38,0) 0%,rgba(220,38,38,0.25) 15%,rgba(220,38,38,0) 25%)" }}
@@ -163,7 +186,7 @@ const TrackingContent = () => {
     const searchParams = useSearchParams();
     const urlId = searchParams.get("id") || "";
     const [trackingId, setTrackingId] = useState(urlId);
-    const [shipment, setShipment] = useState<Shipment | null>(null);
+    const [shipment, setShipment] = useState<any | null>(null);
     const [events, setEvents] = useState<TrackingEvent[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [isFocused, setIsFocused] = useState(false);
@@ -176,27 +199,39 @@ const TrackingContent = () => {
         setError(null); setShipment(null); setEvents([]);
 
         startTransition(async () => {
-            // Fetch from Supabase
-            const { data: s, error: se } = await supabase
-                .from("shipments")
-                .select("*")
-                .eq("tracking_id", id.toUpperCase().trim())
-                .single();
+            const { shipment: s, events: evts, error: err } = await trackShipment(id.toUpperCase().trim());
 
-            if (se || !s) { setError("Shipment not found. Please verify your tracking ID."); return; }
-            setShipment(s as Shipment);
+            if (err || !s) {
+                setError(err || "Shipment not found. Please verify your tracking ID.");
+                return;
+            }
 
-            const { data: evts } = await supabase
-                .from("tracking_events")
-                .select("*")
-                .eq("tracking_id", id.toUpperCase().trim())
-                .order("sort_order", { ascending: true });
-
-            setEvents((evts ?? []) as TrackingEvent[]);
+            setShipment(s as unknown as Shipment);
+            setEvents((evts ?? []) as unknown as TrackingEvent[]);
         });
     };
 
     useEffect(() => { if (urlId) doSearch(urlId); }, []); // eslint-disable-line
+
+    // ── Live Polling for Rider Location ──
+    useEffect(() => {
+        if (!shipment || shipment.status === "delivered" || shipment.status === "failed") return;
+
+        // Every 25 seconds, refresh coordinates if available
+        const interval = setInterval(async () => {
+            const { shipment: s } = await trackShipment(shipment.tracking_id);
+            if (s) {
+                setShipment((prev: any) => ({
+                    ...prev,
+                    last_lat: (s as any).last_lat,
+                    last_lng: (s as any).last_lng,
+                    last_location_update: (s as any).last_location_update
+                }));
+            }
+        }, 25000);
+
+        return () => clearInterval(interval);
+    }, [shipment?.id, shipment?.status]);
 
     const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); doSearch(trackingId); };
 
@@ -421,7 +456,12 @@ const TrackingContent = () => {
                                 {/* ── Right ── */}
                                 <div className="lg:col-span-2 space-y-5">
                                     <div className="overflow-hidden rounded-3xl border border-surface-200 shadow-sm" style={{ height: 280 }}>
-                                        <RouteMap origin={shipment.origin_city ?? "Origin"} dest={shipment.destination_city ?? "Destination"} />
+                                        <RouteMap
+                                            origin={shipment.origin_city ?? "Origin"}
+                                            dest={shipment.destination_city ?? "Destination"}
+                                            riderLat={shipment.last_lat}
+                                            riderLng={shipment.last_lng}
+                                        />
                                     </div>
 
                                     {/* Telemetry */}
@@ -460,7 +500,7 @@ const TrackingContent = () => {
                                         <div className="card p-6">
                                             <div className="flex items-center gap-4 mb-5">
                                                 <div className="w-12 h-12 rounded-full bg-red-brand flex items-center justify-center font-bold text-white text-lg shadow-md shadow-red-brand/30 flex-shrink-0">
-                                                    {shipment.rider_name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)}
+                                                    {(shipment.rider_name as string).split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)}
                                                 </div>
                                                 <div>
                                                     <p className="font-bold text-ink-900 text-sm">{shipment.rider_name}</p>

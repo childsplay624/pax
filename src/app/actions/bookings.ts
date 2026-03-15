@@ -10,6 +10,7 @@ function generateTrackingId(): string {
 }
 
 import { calculatePrice } from "@/lib/pricing";
+import { initializeShipmentPayment } from "@/app/actions/payments";
 
 /* ── Create new shipment (booking) ───────────────────────────── */
 export async function createShipment(data: {
@@ -27,12 +28,14 @@ export async function createShipment(data: {
     declared_value: number;
     service_type: "standard" | "express" | "same_day" | "bulk";
     special_instructions?: string;
-}): Promise<{ tracking_id: string | null; error: string | null }> {
+}): Promise<{ tracking_id: string | null; checkout_url?: string | null; error: string | null }> {
     const supabase = await createServerSupabaseClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     // 1. Calculate Financials
     const pricing = calculatePrice(data.sender_state, data.recipient_state, data.weight_kg, data.service_type);
+
+    let is_prepaid = false;
 
     // 2. Handle Merchant Payment (Automatic Debit if applicable)
     if (user) {
@@ -64,6 +67,8 @@ export async function createShipment(data: {
                     service: data.service_type
                 }
             });
+
+            is_prepaid = true;
         }
     }
 
@@ -77,11 +82,12 @@ export async function createShipment(data: {
         Date.now() + (hoursMap[data.service_type] ?? 72) * 3600 * 1000
     ).toISOString();
 
+    // 3. Create Shipment
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: shipment, error } = await (supabase.from("shipments") as any)
         .insert({
             tracking_id,
-            status: "confirmed",
+            status: is_prepaid ? "confirmed" : "pending",
             service_type: data.service_type,
             sender_name: data.sender_name,
             sender_phone: data.sender_phone,
@@ -98,16 +104,27 @@ export async function createShipment(data: {
             insured: true,
             special_instructions: data.special_instructions,
             estimated_delivery,
+            ...(user ? { user_id: user.id } : {})
         })
         .select("id, tracking_id")
         .single() as { data: { id: string; tracking_id: string } | null; error: unknown };
 
     if (error || !shipment) return { tracking_id: null, error: "Booking failed. Please try again." };
 
-    // Seed initial tracking events
+    // 4. Seed initial tracking events
     const events = [
-        { event_title: "Order Confirmed", event_location: `${data.origin_city}, ${data.sender_state}`, status: "done", sort_order: 1 },
-        { event_title: "Awaiting Collection", event_location: "PAX Collection Hub", status: "current", sort_order: 2 },
+        {
+            event_title: is_prepaid ? "Order Confirmed" : "Order Created",
+            event_location: `${data.origin_city}, ${data.sender_state}`,
+            status: is_prepaid ? "done" : "current",
+            sort_order: 1
+        },
+        {
+            event_title: is_prepaid ? "Awaiting Collection" : "Awaiting Payment",
+            event_location: is_prepaid ? "PAX Collection Hub" : "Paystack Secure Gateway",
+            status: is_prepaid ? "current" : "upcoming",
+            sort_order: 2
+        },
         { event_title: "In Transit", event_location: "En route", status: "upcoming", sort_order: 3 },
         { event_title: "Arrived at Hub", event_location: `PAX ${data.destination_city} Depot`, status: "upcoming", sort_order: 4 },
         { event_title: "Out for Delivery", event_location: data.destination_city, status: "upcoming", sort_order: 5 },
@@ -125,12 +142,23 @@ export async function createShipment(data: {
         }))
     );
 
+    // 5. If not prepaid, initialize Paystack Checkout
+    if (!is_prepaid) {
+        const email = user?.email || `${data.sender_phone.replace(/\s+/g, '')}@pax.ng`;
+        const payment = await initializeShipmentPayment(shipment.id, pricing.total, email);
+
+        if (payment.authorization_url) {
+            return { tracking_id, checkout_url: payment.authorization_url, error: null };
+        }
+    }
+
     return { tracking_id, error: null };
 }
 
 /* ── Create bulk shipments (bulk upload) ───────────────────────── */
 export async function createBulkShipments(dataArray: any[]): Promise<{ count: number; error: string | null }> {
     const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
     // Prepare batch data
     const batch = dataArray.map(data => {
@@ -161,6 +189,7 @@ export async function createBulkShipments(dataArray: any[]): Promise<{ count: nu
             insured: true,
             special_instructions: data.special_instructions,
             estimated_delivery,
+            ...(user ? { user_id: user.id } : {})
         };
     });
 

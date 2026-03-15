@@ -3,6 +3,25 @@
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { sendStatusUpdateSMS, sendDeliveredSMS } from "@/app/actions/notifications";
 
+/* ── Authorization Helper ────────────────────────────────────────── */
+async function requireAdmin() {
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Unauthorized");
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: profile } = await (supabase as any)
+        .from("profiles")
+        .select("account_type")
+        .eq("id", user.id)
+        .single();
+
+    if (profile?.account_type !== "admin") {
+        throw new Error("Forbidden: Admin access required");
+    }
+    return supabase;
+}
+
 /* ── Update shipment status + auto-fire Termii SMS ──────────────
    Called from the admin shipments panel when an admin changes a status.
 ──────────────────────────────────────────────────────────────── */
@@ -11,7 +30,7 @@ export async function updateShipmentStatus(
     newStatus: string,
     currentLocation?: string
 ): Promise<{ success: boolean; error: string | null }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = await requireAdmin();
 
     // Fetch the shipment details first (we need phone numbers for SMS)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -114,8 +133,10 @@ export async function getAdminStats(): Promise<{
     totalUsers: number;
     pendingKYC: number;
     pendingSettlements: number;
+    recentShipments: any[];
+    recentKYC: any[];
 }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = await requireAdmin();
     const today = new Date().toISOString().slice(0, 10);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -131,6 +152,8 @@ export async function getAdminStats(): Promise<{
         { count: kyc },
         { count: settlements },
         { data: transactions },
+        { data: recentShipments },
+        { data: recentKYC },
     ] = await Promise.all([
         (supabase as any).from("shipments").select("*", { count: "exact", head: true }),
         (supabase as any).from("shipments").select("*", { count: "exact", head: true }).in("status", ["in_transit", "collected", "at_hub", "out_for_delivery"]),
@@ -143,6 +166,8 @@ export async function getAdminStats(): Promise<{
         (supabase as any).from("profiles").select("*", { count: "exact", head: true }).eq("account_type", "business").eq("kyc_status", "pending"),
         (supabase as any).from("settlements").select("*", { count: "exact", head: true }).eq("status", "pending"),
         (supabase as any).from("wallet_transactions").select("amount, metadata").eq("status", "success").eq("type", "debit"),
+        (supabase as any).from("shipments").select("*").order("created_at", { ascending: false }).limit(6),
+        (supabase as any).from("profiles").select("*").eq("account_type", "business").eq("kyc_status", "pending").limit(4),
     ]);
 
     let revenue = 0;
@@ -174,11 +199,13 @@ export async function getAdminStats(): Promise<{
         totalUsers: users ?? 0,
         pendingKYC: kyc ?? 0,
         pendingSettlements: settlements ?? 0,
+        recentShipments: recentShipments || [],
+        recentKYC: recentKYC || [],
     };
 }
 
 export async function updateMerchantKYC(userId: string, status: "verified" | "rejected" | "pending"): Promise<{ success: boolean; error: string | null }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = await requireAdmin();
     const { error } = await (supabase as any)
         .from("profiles")
         .update({ kyc_status: status })
@@ -190,7 +217,7 @@ export async function updateMerchantKYC(userId: string, status: "verified" | "re
 
 /* ── Rider Fleet Management ────────────────────────────────── */
 export async function getFleetStats() {
-    const supabase = await createServerSupabaseClient();
+    const supabase = await requireAdmin();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [
@@ -217,7 +244,7 @@ export async function getFleetStats() {
 }
 
 export async function getRiders(search = "", status = "") {
-    const supabase = await createServerSupabaseClient();
+    const supabase = await requireAdmin();
     let query = (supabase as any).from("riders").select("*").order("rating", { ascending: false });
 
     if (status && status !== "all") query = query.eq("status", status);
@@ -228,7 +255,7 @@ export async function getRiders(search = "", status = "") {
 }
 
 export async function assignRiderToShipment(shipmentId: string, riderId: string) {
-    const supabase = await createServerSupabaseClient();
+    const supabase = await requireAdmin();
 
     // 1. Get Rider Details
     const { data: rider } = await (supabase as any).from("riders").select("*").eq("id", riderId).single();
@@ -248,4 +275,105 @@ export async function assignRiderToShipment(shipmentId: string, riderId: string)
     await (supabase as any).from("riders").update({ status: "on_delivery" }).eq("id", riderId);
 
     return { success: true, error: null };
+}
+
+/* ── User & Profile Management ──────────────────────────────── */
+export async function getProfiles(role?: string) {
+    const supabase = await requireAdmin();
+    let query = (supabase as any).from("profiles").select("*").order("created_at", { ascending: false });
+    if (role) query = query.eq("account_type", role);
+    const { data } = await query;
+    return data || [];
+}
+
+export async function getMerchantProfilesWithCount() {
+    const supabase = await requireAdmin();
+    const { data } = await (supabase as any)
+        .from("profiles")
+        .select("*, shipments:shipments(count)")
+        .eq("account_type", "business")
+        .order("created_at", { ascending: false });
+    return data || [];
+}
+
+export async function updateProfileRole(userId: string, role: string) {
+    const supabase = await requireAdmin();
+    const { error } = await (supabase as any)
+        .from("profiles")
+        .update({ account_type: role })
+        .eq("id", userId);
+    return { success: !error, error: error?.message || null };
+}
+
+export async function deleteProfile(userId: string) {
+    const supabase = await requireAdmin();
+    const { error } = await (supabase as any)
+        .from("profiles")
+        .delete()
+        .eq("id", userId);
+    return { success: !error, error: error?.message || null };
+}
+
+/* ── Contact Messages ───────────────────────────────────────── */
+export async function getContactMessages() {
+    const supabase = await requireAdmin();
+    const { data } = await (supabase as any)
+        .from("contact_messages")
+        .select("*")
+        .order("created_at", { ascending: false });
+    return data || [];
+}
+
+export async function deleteContactMessage(id: string) {
+    const supabase = await requireAdmin();
+    const { error } = await (supabase as any)
+        .from("contact_messages")
+        .delete()
+        .eq("id", id);
+    return { success: !error, error: error?.message || null };
+}
+
+/* ── Settlements ────────────────────────────────────────────── */
+export async function getSettlements(status?: string) {
+    const supabase = await requireAdmin();
+    let query = (supabase as any)
+        .from("settlements")
+        .select(`
+            id, amount, status, created_at, user_id, type,
+            profiles ( full_name, role_details )
+        `)
+        .order("created_at", { ascending: false });
+    if (status && status !== "all") query = query.eq("status", status);
+    const { data } = await query;
+    return data || [];
+}
+
+export async function updateAdminSettlementStatus(id: string, status: string) {
+    const supabase = await requireAdmin();
+    const { error } = await (supabase as any)
+        .from("settlements")
+        .update({ status })
+        .eq("id", id);
+    return { success: !error, error: error?.message || null };
+}
+
+/* ── Shipments ──────────────────────────────────────────────── */
+export async function getAdminShipments(filter?: string) {
+    const supabase = await requireAdmin();
+    let query = (supabase as any).from("shipments").select("*").order("created_at", { ascending: false });
+    if (filter && filter !== "all") query = query.eq("status", filter);
+    const { data } = await query;
+    return data || [];
+}
+
+/* ── KYC / Verification ─────────────────────────────────────── */
+export async function getPendingKYCProfiles() {
+    const supabase = await requireAdmin();
+    const { data } = await (supabase as any)
+        .from("profiles")
+        .select("*")
+        .eq("account_type", "business")
+        .eq("kyc_status", "pending")
+        .order("created_at", { ascending: false });
+    return data || [];
 }

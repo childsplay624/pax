@@ -3,10 +3,10 @@
 import { useState, useTransition, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-    ArrowRight, ArrowLeft, CheckCircle2, Package, 
-    MapPin, User, Scale, Clipboard, FileUp, 
-    Zap, Shield, Loader2 
+import {
+    ArrowRight, ArrowLeft, CheckCircle2, Package,
+    MapPin, User, Scale, Clipboard, FileUp,
+    Zap, Shield, Loader2
 } from "lucide-react";
 import { createShipment } from "@/app/actions/bookings";
 import { sendBookingConfirmationSMS } from "@/app/actions/notifications";
@@ -67,24 +67,30 @@ function BookingContent() {
 
     const handleSubmit = () => {
         start(async () => {
-            const { tracking_id, error } = await createShipment({
+            const { tracking_id, checkout_url, error } = await createShipment({
                 ...form,
                 weight_kg: Number(form.weight_kg),
                 declared_value: Number(form.declared_value),
             });
             if (error) { alert(error); return; }
+
+            if (checkout_url) {
+                window.location.href = checkout_url;
+                return;
+            }
+
             setTrackingId(tracking_id);
 
             if (tracking_id && form.sender_phone) {
                 const price = calculatePrice(form.sender_state, form.recipient_state, Number(form.weight_kg), form.service_type);
                 sendBookingConfirmationSMS({
-                    senderPhone:  form.sender_phone,
-                    senderName:   form.sender_name || "Customer",
-                    trackingId:   tracking_id,
-                    origin:       form.origin_city,
-                    destination:  form.destination_city,
-                    eta:          price.eta,
-                }).catch(() => {});
+                    senderPhone: form.sender_phone,
+                    senderName: form.sender_name || "Customer",
+                    trackingId: tracking_id,
+                    origin: form.origin_city,
+                    destination: form.destination_city,
+                    eta: price.eta,
+                }).catch(() => { });
             }
         });
     };
@@ -102,12 +108,12 @@ function BookingContent() {
                     {bulkCount ? "Bulk Registered!" : "Shipment Booked!"}
                 </h2>
                 <p className="text-white/40 text-sm mb-10 leading-relaxed font-medium">
-                    {bulkCount 
+                    {bulkCount
                         ? `${bulkCount} parcels have been successfully registered in the PAX Cloud network.`
                         : "Your shipment sequence has been initiated. Save your tracking telemetry ID:"
                     }
                 </p>
-                
+
                 {!bulkCount && (
                     <div className="bg-white/[0.03] border border-white/5 rounded-3xl px-8 py-8 mb-10">
                         <p className="text-white/20 text-[10px] font-black uppercase tracking-[0.4em] mb-3">Telemetry tracking ID</p>
@@ -131,11 +137,11 @@ function BookingContent() {
 
     return (
         <div className="p-8 lg:p-12 space-y-12">
-            
-            <BulkUploadModal 
-                isOpen={isBulkOpen} 
-                onClose={() => setIsBulkOpen(false)} 
-                onSuccess={handleBulkSuccess} 
+
+            <BulkUploadModal
+                isOpen={isBulkOpen}
+                onClose={() => setIsBulkOpen(false)}
+                onSuccess={handleBulkSuccess}
                 dark
             />
 
@@ -172,7 +178,7 @@ function BookingContent() {
                             <div className={cn(
                                 "flex items-center gap-3 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all",
                                 step === s.id ? "bg-red-brand text-white shadow-xl shadow-red-brand/20 scale-105" :
-                                step > s.id ? "bg-red-brand/10 text-red-brand border border-red-brand/20" : "bg-white/[0.03] text-white/20 border border-white/5"
+                                    step > s.id ? "bg-red-brand/10 text-red-brand border border-red-brand/20" : "bg-white/[0.03] text-white/20 border border-white/5"
                             )}>
                                 {step > s.id ? <CheckCircle2 className="w-4 h-4" /> : <s.icon className="w-4 h-4" />}
                                 <span>{s.label}</span>

@@ -9,8 +9,7 @@ import {
     Activity, Clipboard, Navigation,
     Loader2, Users, ShieldCheck, ArrowUpRight, Clock
 } from "lucide-react";
-import { getRiders, getFleetStats, assignRiderToShipment } from "@/app/actions/admin";
-import { getDashboardShipments } from "@/app/actions/dashboard";
+import { getRiders, getFleetStats, assignRiderToShipment, getAdminShipments } from "@/app/actions/admin";
 import { cn } from "@/lib/utils";
 
 const BOX = "bg-[#111116]/80 backdrop-blur-xl border border-white/[0.06] rounded-[2.5rem] overflow-hidden shadow-2xl transition-all hover:border-white/10";
@@ -37,11 +36,11 @@ export default function FleetCommandPage() {
         const [r, s, p] = await Promise.all([
             getRiders(),
             getFleetStats(),
-            getDashboardShipments(1, 10, "", "confirmed")
+            getAdminShipments("confirmed")
         ]);
         setRiders(r);
         setStats(s);
-        setPendingShipments(p.shipments);
+        setPendingShipments(p);
         setLoading(false);
     };
 

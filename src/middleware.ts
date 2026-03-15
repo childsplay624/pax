@@ -22,11 +22,12 @@ export async function middleware(request: NextRequest) {
 
     const { data: { session } } = await supabase.auth.getSession();
 
-    // Protect /admin, /account and /dashboard routes
+    // Protect /admin, /account, /dashboard, and /rider routes
     if (
         request.nextUrl.pathname.startsWith("/admin") ||
         request.nextUrl.pathname.startsWith("/account") ||
-        request.nextUrl.pathname.startsWith("/dashboard")
+        request.nextUrl.pathname.startsWith("/dashboard") ||
+        request.nextUrl.pathname.startsWith("/rider")
     ) {
         if (!session) {
             const url = request.nextUrl.clone();
@@ -35,12 +36,51 @@ export async function middleware(request: NextRequest) {
             return NextResponse.redirect(url);
         }
 
-        const account_type = session.user.user_metadata?.account_type;
+        let account_type = session.user.user_metadata?.account_type;
+
+        // Fallback: If metadata is missing account_type, fetch from profiles
+        if (!account_type) {
+            const { data: profile } = await supabase
+                .from("profiles")
+                .select("account_type")
+                .eq("id", session.user.id)
+                .single();
+
+            if (profile) {
+                account_type = profile.account_type;
+            } else {
+                // Secondary fallback: check if they are in the riders table
+                const { data: rider } = await supabase
+                    .from("riders")
+                    .select("id")
+                    .eq("user_id", session.user.id)
+                    .maybeSingle();
+
+                if (rider) account_type = "rider";
+            }
+        }
+
+        // Redirect Riders to their dashboard if they try to access merchant/personal/booking areas
+        if (
+            (request.nextUrl.pathname.startsWith("/dashboard") ||
+                request.nextUrl.pathname.startsWith("/account") ||
+                request.nextUrl.pathname.startsWith("/book")) &&
+            account_type === "rider"
+        ) {
+            return NextResponse.redirect(new URL("/rider", request.url));
+        }
 
         // Strict /admin protection
         if (request.nextUrl.pathname.startsWith("/admin") && account_type !== "admin") {
             const url = request.nextUrl.clone();
-            url.pathname = account_type === "business" ? "/dashboard" : "/account";
+            url.pathname = account_type === "rider" ? "/rider" : (account_type === "business" ? "/dashboard" : "/account");
+            return NextResponse.redirect(url);
+        }
+
+        // Strict /rider protection
+        if (request.nextUrl.pathname.startsWith("/rider") && account_type !== "rider") {
+            const url = request.nextUrl.clone();
+            url.pathname = account_type === "admin" ? "/admin" : (account_type === "business" ? "/dashboard" : "/account");
             return NextResponse.redirect(url);
         }
     }
@@ -49,5 +89,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-    matcher: ["/admin/:path*", "/account/:path*", "/dashboard/:path*"],
+    matcher: ["/admin/:path*", "/account/:path*", "/dashboard/:path*", "/rider/:path*", "/book/:path*"],
 };

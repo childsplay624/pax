@@ -7,7 +7,7 @@ import {
     ArrowUpRight, Landmark, ExternalLink,
     Clock, AlertCircle, ShieldCheck, Loader2
 } from "lucide-react";
-import { supabase } from "@/lib/supabase"; // Use client-side for admin query
+import { getSettlements, updateAdminSettlementStatus } from "@/app/actions/admin";
 import { cn } from "@/lib/utils";
 
 const BOX = "bg-[#111116] border border-white/[0.06] rounded-[2rem] overflow-hidden";
@@ -21,14 +21,7 @@ export default function AdminSettlementsPage() {
 
     const loadSettlements = async () => {
         setLoading(true);
-        let query = (supabase as any).from("settlements").select(`
-            *,
-            profiles:user_id ( full_name, company_name, phone, kyc_status )
-        `).order("created_at", { ascending: false });
-
-        if (filter !== "all") query = query.eq("status", filter);
-
-        const { data } = await query;
+        const data = await getSettlements(filter);
         setSettlements(data ?? []);
         setLoading(false);
     };
@@ -37,8 +30,8 @@ export default function AdminSettlementsPage() {
 
     const updateStatus = async (id: string, status: string) => {
         startProcess(async () => {
-            await (supabase as any).from("settlements").update({ status }).eq("id", id);
-            loadSettlements();
+            const res = await updateAdminSettlementStatus(id, status);
+            if (res.success) loadSettlements();
         });
     };
 

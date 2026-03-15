@@ -105,9 +105,14 @@ export async function riderUpdateStatus(
     location?: string
 ): Promise<{ success: boolean; error: string | null }> {
     const supabase = await createServerSupabaseClient();
-
+    // 1. Fetch shipment to get tracking_id
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any)
+    const { data: shipment } = await (supabase as any).from("shipments").select("tracking_id").eq("id", shipmentId).single();
+    if (!shipment) return { success: false, error: "Shipment not found" };
+
+    // 2. Update Shipment Status
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: shipErr } = await (supabase as any)
         .from("shipments")
         .update({
             status: newStatus,
@@ -116,9 +121,40 @@ export async function riderUpdateStatus(
         })
         .eq("id", shipmentId);
 
-    if (error) return { success: false, error: error.message };
+    if (shipErr) return { success: false, error: shipErr.message };
 
-    // If delivered, update rider total_deliveries counter
+    // 3. Synchronize Tracking Events Timeline
+    const statusEventMap: Record<string, number> = {
+        collected: 2,
+        in_transit: 3,
+        at_hub: 4,
+        out_for_delivery: 5,
+        delivered: 6,
+    };
+    const currentStep = statusEventMap[newStatus];
+
+    if (currentStep) {
+        // Mark all steps up to the previous as 'done'
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any).from("tracking_events")
+            .update({ status: "done" })
+            .eq("shipment_id", shipmentId)
+            .lt("sort_order", currentStep);
+
+        // Update the current step
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any).from("tracking_events")
+            .update({
+                status: newStatus === "delivered" ? "done" : "current",
+                event_location: location || undefined,
+                event_date: new Date().toISOString().slice(0, 10),
+                event_time: new Date().toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" })
+            })
+            .eq("shipment_id", shipmentId)
+            .eq("sort_order", currentStep);
+    }
+
+    // 4. Handle Post-Delivery Actions
     if (newStatus === "delivered") {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (supabase as any).rpc("increment_rider_deliveries", { shipment_id: shipmentId })
@@ -127,3 +163,26 @@ export async function riderUpdateStatus(
 
     return { success: true, error: null };
 }
+
+/* ── Update Rider GPS Coordinates ───────────────────────────── */
+export async function updateRiderLocation(
+    riderId: string,
+    lat: number,
+    lng: number
+): Promise<{ success: boolean; error: string | null }> {
+    const supabase = await createServerSupabaseClient();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
+        .from("riders")
+        .update({
+            last_lat: lat,
+            last_lng: lng,
+            last_location_update: new Date().toISOString()
+        })
+        .eq("id", riderId);
+
+    if (error) return { success: false, error: error.message };
+    return { success: true, error: null };
+}
+

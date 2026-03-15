@@ -3,7 +3,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY!;
-const PAYSTACK_BASE   = "https://api.paystack.co";
+const PAYSTACK_BASE = "https://api.paystack.co";
 
 /* ── Initialize a wallet top-up transaction ──────────────────────
    Returns the Paystack authorization_url to redirect the user to.
@@ -38,6 +38,48 @@ export async function initializeWalletTopup(amountNaira: number): Promise<{
                 amount_naira: amountNaira,
             },
             callback_url: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/dashboard/wallet/verify`,
+        }),
+    });
+
+    const json = await res.json();
+    if (!res.ok || !json.status) {
+        return { authorization_url: null, reference: null, error: json.message ?? "Payment initialization failed" };
+    }
+
+    return {
+        authorization_url: json.data.authorization_url,
+        reference: json.data.reference,
+        error: null,
+    };
+}
+
+/* ── Initialize a per-shipment payment ───────────────────────────
+   Used for GUESTS and PERSONAL users who pay per order.
+──────────────────────────────────────────────────────────────── */
+export async function initializeShipmentPayment(shipmentId: string, amountNaira: number, email: string): Promise<{
+    authorization_url: string | null;
+    reference: string | null;
+    error: string | null;
+}> {
+    const reference = `PAX-SHIP-${shipmentId.slice(0, 8).toUpperCase()}-${Date.now()}`;
+    const amountKobo = amountNaira * 100;
+
+    const res = await fetch(`${PAYSTACK_BASE}/transaction/initialize`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${PAYSTACK_SECRET}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            email,
+            amount: amountKobo,
+            reference,
+            currency: "NGN",
+            metadata: {
+                shipment_id: shipmentId,
+                type: "shipment_payment",
+            },
+            callback_url: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/tracking?id=${shipmentId}&payment=success`,
         }),
     });
 
@@ -115,6 +157,34 @@ export async function verifyAndCreditWallet(reference: string): Promise<{
     return { success: true, amount: amountNaira, error: null };
 }
 
+/* ── Verify shipment payment and confirm the order ──────────────── */
+export async function verifyShipmentPayment(reference: string): Promise<{ success: boolean; error: string | null }> {
+    const supabase = await createServerSupabaseClient();
+
+    const res = await fetch(`${PAYSTACK_BASE}/transaction/verify/${reference}`, {
+        headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` },
+    });
+    const json = await res.json();
+
+    if (!res.ok || !json.status || json.data?.status !== "success") {
+        return { success: false, error: "Payment verification failed" };
+    }
+
+    const shipmentId = json.data.metadata?.shipment_id;
+    if (!shipmentId) return { success: false, error: "Missing shipment ID in metadata" };
+
+    // Update shipment status to 'confirmed'
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
+        .from("shipments")
+        .update({ status: "confirmed", updated_at: new Date().toISOString() })
+        .eq("id", shipmentId);
+
+    if (error) return { success: false, error: error.message };
+
+    return { success: true, error: null };
+}
+
 /* ── Paystack Webhook handler (called from API route) ────────────
    Validates the Paystack signature and processes the event.        
 ──────────────────────────────────────────────────────────────── */
@@ -133,6 +203,8 @@ export async function processPaystackWebhook(payload: string, signature: string)
         const ref = event.data?.reference;
         if (ref?.startsWith("PAX-WALLET-")) {
             await verifyAndCreditWallet(ref);
+        } else if (ref?.startsWith("PAX-SHIP-")) {
+            await verifyShipmentPayment(ref);
         }
     }
 

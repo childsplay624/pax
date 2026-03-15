@@ -52,7 +52,7 @@ const Navbar = () => {
     const [activeMenu, setActiveMenu] = useState<string | null>(null);
     const [mobileGroup, setMobileGroup] = useState<string | null>(null);
     const [userEmail, setUserEmail] = useState<string | null>(null);
-    const [accountType, setAccountType] = useState<"personal" | "business" | null>(null);
+    const [accountType, setAccountType] = useState<"personal" | "business" | "rider" | "admin" | null>(null);
 
     useEffect(() => {
         const onScroll = () => setScrolled(window.scrollY > 30);
@@ -77,6 +77,13 @@ const Navbar = () => {
     }, []);
 
     const userInitial = userEmail?.[0]?.toUpperCase() ?? "";
+
+    const getDashboardHref = () => {
+        if (accountType === "admin") return "/admin";
+        if (accountType === "rider") return "/rider";
+        if (accountType === "business") return "/dashboard";
+        return "/account";
+    };
 
     return (
         <>
@@ -203,12 +210,12 @@ const Navbar = () => {
                         {userEmail ? (
                             /* Logged-in state */
                             <div className="flex items-center gap-2">
-                                <Link href={accountType === "business" ? "/dashboard" : "/account"}
+                                <Link href={getDashboardHref()}
                                     className="flex items-center gap-2 text-sm font-semibold text-ink-600 hover:text-ink-900 border border-surface-200 hover:border-surface-300 px-3 py-2 rounded-full transition-all">
                                     <div className="w-5 h-5 rounded-full bg-red-brand flex items-center justify-center text-white text-[10px] font-bold">
                                         {userInitial}
                                     </div>
-                                    My Account
+                                    My Dashboard
                                 </Link>
                                 <button onClick={() => signOut()}
                                     className="flex items-center gap-1.5 text-sm font-semibold text-ink-400 hover:text-red-brand transition-colors px-2 py-2">
@@ -319,10 +326,10 @@ const Navbar = () => {
                                 </Link>
                                 {userEmail ? (
                                     <>
-                                        <Link href={accountType === "business" ? "/dashboard" : "/account"} onClick={() => setMobileOpen(false)}
+                                        <Link href={getDashboardHref()} onClick={() => setMobileOpen(false)}
                                             className="flex items-center justify-center gap-2 border border-surface-200 rounded-xl py-4 font-bold text-ink-700 hover:bg-surface-100 transition-colors">
                                             <div className="w-6 h-6 rounded-full bg-red-brand flex items-center justify-center text-white text-xs font-bold">{userInitial}</div>
-                                            My Account
+                                            My Dashboard
                                         </Link>
                                         <button onClick={() => { setMobileOpen(false); signOut(); }}
                                             className="flex items-center justify-center gap-2 border border-red-brand/20 bg-red-brand/5 rounded-xl py-4 font-bold text-red-brand hover:bg-red-brand/10 transition-colors">

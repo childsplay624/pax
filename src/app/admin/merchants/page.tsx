@@ -8,8 +8,7 @@ import {
     Eye, MapPin, Building2, Phone, Mail,
     ArrowRight, Loader2, Filter, Download, Clock, Package, RefreshCw
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
-import { updateMerchantKYC } from "@/app/actions/admin";
+import { getMerchantProfilesWithCount, updateMerchantKYC } from "@/app/actions/admin";
 import { cn } from "@/lib/utils";
 
 const KYC_COLORS: Record<string, string> = {
@@ -42,12 +41,8 @@ export default function AdminMerchantsPage() {
 
     const load = async () => {
         setLoading(true);
-        // Fetch profiles + count shipments for each
-        const { data: profiles } = await (supabase as any)
-            .from("profiles")
-            .select("*, shipments:shipments(count)")
-            .eq("account_type", "business")
-            .order("created_at", { ascending: false });
+        // Fetch profiles + count shipments via secure server action
+        const profiles = await getMerchantProfilesWithCount();
 
         const formatted = (profiles || []).map((p: any) => ({
             ...p,

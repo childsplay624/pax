@@ -8,7 +8,7 @@ import {
     MapPin, Truck
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "@/lib/supabase";
+import { getContactMessages, deleteContactMessage } from "@/app/actions/admin";
 import { cn } from "@/lib/utils";
 
 export default function AdminContactsPage() {
@@ -19,7 +19,7 @@ export default function AdminContactsPage() {
 
     const load = async () => {
         setLoading(true);
-        const { data } = await (supabase as any).from("contact_messages").select("*").order("created_at", { ascending: false });
+        const data = await getContactMessages();
         setRows(data ?? []);
         setLoading(false);
     };
@@ -33,9 +33,11 @@ export default function AdminContactsPage() {
     );
 
     const del = async (id: string) => {
-        await (supabase as any).from("contact_messages").delete().eq("id", id);
-        setRows(prev => prev.filter(r => r.id !== id));
-        if (selected?.id === id) setSelected(null);
+        const res = await deleteContactMessage(id);
+        if (res.success) {
+            setRows(prev => prev.filter(r => r.id !== id));
+            if (selected?.id === id) setSelected(null);
+        }
     };
 
     const BOX = "bg-[#111116] border border-white/[0.06] rounded-[2rem] overflow-hidden shadow-2xl";

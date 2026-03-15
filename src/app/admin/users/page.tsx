@@ -8,7 +8,7 @@ import {
     Filter, RefreshCw, X, CheckCircle2, AlertCircle, Loader2,
     Activity, TrendingUp, Globe, Zap, ArrowUpRight
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { getProfiles, updateProfileRole, deleteProfile } from "@/app/actions/admin";
 import { cn } from "@/lib/utils";
 
 const BOX = "bg-[#111116]/80 backdrop-blur-xl border border-white/[0.06] rounded-[2.5rem] overflow-hidden shadow-2xl transition-all hover:border-white/10";
@@ -29,11 +29,7 @@ export default function UserManagementPage() {
 
     const load = async () => {
         setLoading(true);
-        const { data } = await (supabase as any)
-            .from("profiles")
-            .select("*")
-            .order("created_at", { ascending: false });
-
+        const data = await getProfiles();
         setProfiles(data || []);
         setLoading(false);
     };
@@ -72,12 +68,8 @@ export default function UserManagementPage() {
 
     const updateRole = async (userId: string, role: string) => {
         start(async () => {
-            const { error } = await (supabase as any)
-                .from("profiles")
-                .update({ account_type: role })
-                .eq("id", userId);
-
-            if (error) alert("Failed to update role");
+            const { success } = await updateProfileRole(userId, role);
+            if (!success) alert("Failed to update role");
             else {
                 setProfiles(prev => prev.map(p => p.id === userId ? { ...p, account_type: role } : p));
                 if (selected?.id === userId) setSelected({ ...selected, account_type: role });
@@ -89,12 +81,8 @@ export default function UserManagementPage() {
         if (!confirm("Are you sure you want to remove this profile?")) return;
 
         start(async () => {
-            const { error } = await (supabase as any)
-                .from("profiles")
-                .delete()
-                .eq("id", userId);
-
-            if (error) alert("Failed to delete profile");
+            const { success } = await deleteProfile(userId);
+            if (!success) alert("Failed to delete profile");
             else {
                 setProfiles(prev => prev.filter(p => p.id !== userId));
                 setSelected(null);

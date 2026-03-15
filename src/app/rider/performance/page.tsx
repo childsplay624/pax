@@ -136,8 +136,8 @@ export default function RiderPerformancePage() {
                         </div>
                         <div className="flex items-end gap-2 h-36">
                             {loading ? (
-                                Array.from({ length: 7 }).map((_, i) => (
-                                    <div key={i} className="flex-1 bg-white/[0.03] rounded-t-lg animate-pulse" style={{ height: `${30 + Math.random() * 60}%` }} />
+                                [35, 65, 40, 80, 50, 75, 45].map((h, i) => (
+                                    <div key={i} className="flex-1 bg-white/[0.03] rounded-t-lg animate-pulse" style={{ height: `${h}%` }} />
                                 ))
                             ) : dailyData.length === 0 ? (
                                 <div className="flex-1 flex items-center justify-center text-white/20 text-xs font-bold uppercase tracking-widest">

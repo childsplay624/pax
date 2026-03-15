@@ -22,10 +22,14 @@ export async function getDashboardUser() {
 export async function getDashboardStats() {
     const supabase = await createServerSupabaseClient();
 
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: raw } = await (supabase as any)
         .from("shipments")
-        .select("status, service_type, declared_value, created_at, recipient_state, weight_kg");
+        .select("status, service_type, declared_value, created_at, recipient_state, weight_kg")
+        .eq("user_id", user.id);
 
     const shipments = (raw ?? []) as Pick<Shipment, "status" | "service_type" | "declared_value" | "created_at" | "recipient_state" | "weight_kg">[];
     if (!shipments.length && !raw) return null;
@@ -60,10 +64,14 @@ export async function getDashboardStats() {
 export async function getDashboardShipments(page = 1, pageSize = 20, search = "", status = "") {
     const supabase = await createServerSupabaseClient();
 
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { shipments: [], count: 0, error: "Not authenticated" };
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let query = (supabase as any)
         .from("shipments")
         .select("*", { count: "exact" })
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .range((page - 1) * pageSize, page * pageSize - 1);
 
@@ -109,18 +117,18 @@ export async function getWalletData() {
 
     // Calculate Stats
     const totalFunded = (txns ?? []).filter((t: any) => t.type === "credit" && t.status === "success").reduce((acc: number, t: any) => acc + Number(t.amount), 0);
-    const totalSpent  = (txns ?? []).filter((t: any) => t.type === "debit" && t.status === "success").reduce((acc: number, t: any) => acc + Number(t.amount), 0);
+    const totalSpent = (txns ?? []).filter((t: any) => t.type === "debit" && t.status === "success").reduce((acc: number, t: any) => acc + Number(t.amount), 0);
     const monthlySpent = (txns ?? []).filter((t: any) => t.type === "debit" && t.status === "success" && t.created_at >= firstDayOfMonth).reduce((acc: number, t: any) => acc + Number(t.amount), 0);
 
     const transactions = (txns ?? []).slice(0, 20).map((t: any) => ({
-        id:          t.id,
-        type:        t.type,
-        amount:      Number(t.amount),
+        id: t.id,
+        type: t.type,
+        amount: Number(t.amount),
         description: t.description ?? "—",
-        date:        t.created_at?.slice(0, 10) ?? "",
-        ref:         t.reference ?? "—",
-        status:      t.status,
-        metadata:    t.metadata || {},
+        date: t.created_at?.slice(0, 10) ?? "",
+        ref: t.reference ?? "—",
+        status: t.status,
+        metadata: t.metadata || {},
     }));
 
     return {
@@ -140,6 +148,12 @@ export async function requestSettlement(data: {
     const supabase = await createServerSupabaseClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, error: "Not authenticated" };
+
+    // 0. Check KYC status
+    const { data: profile } = await supabase.from("profiles").select("kyc_status").eq("id", user.id).single();
+    if ((profile as any)?.kyc_status !== "verified") {
+        return { success: false, error: "Account verification required. Please complete your KYC in settings to withdraw funds." };
+    }
 
     // 1. Debit wallet first (atomic)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -198,9 +212,9 @@ export async function updateBusinessProfile(data: {
     const { error } = await (supabase as any)
         .from("profiles")
         .update({
-            full_name:    data.full_name,
-            phone:        data.phone,
-            state:        data.state,
+            full_name: data.full_name,
+            phone: data.phone,
+            state: data.state,
             account_type: "business",
             // company_name stored in metadata if column exists
             ...(data.company_name ? { company_name: data.company_name } : {}),

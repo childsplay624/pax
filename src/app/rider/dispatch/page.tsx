@@ -41,6 +41,7 @@ export default function RiderDispatchPage() {
     const [confirm, setConfirm] = useState<{ shipment: any; nextStatus: string } | null>(null);
     const [isPending, start] = useTransition();
     const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
+    const [locationInput, setLocationInput] = useState("");
     const [riderId, setRiderId] = useState<string | null>(null);
 
     useEffect(() => {
@@ -80,13 +81,14 @@ export default function RiderDispatchPage() {
     const executeUpdate = () => {
         if (!confirm) return;
         start(async () => {
-            const res = await riderUpdateStatus(confirm.shipment.id, confirm.nextStatus as any);
+            const res = await riderUpdateStatus(confirm.shipment.id, confirm.nextStatus as any, locationInput);
             if (res.success) {
                 setShipments(prev => prev.map(s =>
                     s.id === confirm.shipment.id ? { ...s, status: confirm.nextStatus } : s
                 ).filter(s => s.status !== "delivered"));
                 if (selected?.id === confirm.shipment.id) setSelected((p: any) => ({ ...p, status: confirm.nextStatus }));
                 showToast(`✓ Status updated to ${confirm.nextStatus.replace(/_/g, " ")}`, "success");
+                setLocationInput(""); // Clear location input
             } else {
                 showToast(res.error ?? "Update failed", "error");
             }
@@ -155,6 +157,22 @@ export default function RiderDispatchPage() {
                                     Set <span className="text-white font-bold">{confirm.shipment.tracking_id}</span> to{" "}
                                     <span className="text-emerald-400 font-bold">{confirm.nextStatus.replace(/_/g, " ").toUpperCase()}</span>?
                                 </p>
+
+                                {/* Location Input */}
+                                <div className="mb-8 space-y-2">
+                                    <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] ml-1">Current Location (Optional)</label>
+                                    <div className="relative group">
+                                        <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-[#eb0000] transition-colors" />
+                                        <input
+                                            type="text"
+                                            value={locationInput}
+                                            onChange={(e) => setLocationInput(e.target.value)}
+                                            placeholder="e.g. Lekki Hub, Lagos"
+                                            className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white text-sm focus:outline-none focus:border-[#eb0000]/50 transition-all placeholder:text-white/10"
+                                        />
+                                    </div>
+                                </div>
+
                                 <div className="grid grid-cols-2 gap-4">
                                     <button
                                         onClick={() => setConfirm(null)}
@@ -416,9 +434,9 @@ export default function RiderDispatchPage() {
                                         {/* Maps Deep Link */}
                                         <a
                                             href={`https://maps.google.com/?q=${encodeURIComponent(
-                                                selected.status === "collected" || selected.status === "in_transit"
-                                                    ? `${selected.destination_city}, ${selected.recipient_state}`
-                                                    : `${selected.destination_city}, ${selected.recipient_state}`
+                                                selected.status === "out_for_delivery"
+                                                    ? `${selected.recipient_address || ''}, ${selected.destination_city || ''}, ${selected.recipient_state || ''}`
+                                                    : `${selected.destination_city || ''}, ${selected.recipient_state || ''}`
                                             )}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
