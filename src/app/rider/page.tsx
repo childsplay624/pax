@@ -7,11 +7,11 @@ import {
     ArrowRight, TrendingUp, Bike, Truck,
     ToggleLeft, ToggleRight, Loader2, Navigation,
     Clock, ChevronRight, Radio, Shield, Activity,
-    Sun, Moon
+    Sun, Moon, Wallet, CreditCard, ArrowUpRight
 } from "lucide-react";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase";
-import { setRiderStatus, getRiderStats, updateRiderLocation } from "@/app/actions/rider";
+import { setRiderStatus, getRiderStats, updateRiderLocation, requestPayout } from "@/app/actions/rider";
 import { cn } from "@/lib/utils";
 
 const STATUS_LABEL: Record<string, { label: string; color: string; glow: string }> = {
@@ -30,32 +30,35 @@ export default function RiderCockpitPage() {
     const [locationError, setLocationError] = useState<string | null>(null);
     const [isWakeLockActive, setIsWakeLockActive] = useState(false);
     const [wakeLock, setWakeLock] = useState<any>(null);
+    const [payoutModal, setPayoutModal] = useState(false);
+    const [payoutForm, setPayoutForm] = useState({ amount: "", bankName: "", accountNumber: "", accountName: "" });
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const load = async () => {
+        setLoading(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { data: riderData } = await (supabase as any)
+                .from("riders")
+                .select("*")
+                .eq("user_id", user.id)
+                .single();
+
+            if (riderData) {
+                setRider(riderData);
+                const s = await getRiderStats(riderData.id);
+                setStats(s);
+            }
+        } catch (err) {
+            console.warn("[PAX Rider Cockpit] Sync interrupted:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const load = async () => {
-            setLoading(true);
-            try {
-                const { data: { user } } = await supabase.auth.getUser();
-                if (!user) return;
-
-                const { data: riderData } = await (supabase as any)
-                    .from("riders")
-                    .select("*")
-                    .eq("user_id", user.id)
-                    .single();
-
-                if (riderData) {
-                    setRider(riderData);
-                    const s = await getRiderStats(riderData.id);
-                    setStats(s);
-                }
-            } catch (err) {
-                console.warn("[PAX Rider Cockpit] Sync interrupted:", err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         load();
     }, []);
 
@@ -142,6 +145,34 @@ export default function RiderCockpitPage() {
     const showToast = (msg: string) => {
         setToast(msg);
         setTimeout(() => setToast(null), 3500);
+    };
+
+    const handlePayout = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!payoutForm.amount || !payoutForm.bankName || !payoutForm.accountNumber) {
+            showToast("❌ Please fill all banking details");
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const res = await requestPayout({
+                amount: parseFloat(payoutForm.amount),
+                bankName: payoutForm.bankName,
+                accountNumber: payoutForm.accountNumber,
+                accountName: payoutForm.accountName
+            });
+
+            if (res.success) {
+                showToast("✅ Payout requested! Funds debited.");
+                setPayoutModal(false);
+                load(); // Refresh balance
+            } else {
+                showToast(`❌ ${res.error}`);
+            }
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const fmt = (n: number) => `₦${Number(n).toLocaleString("en-NG")}`;
@@ -359,12 +390,13 @@ export default function RiderCockpitPage() {
                             delay: 0.1,
                         },
                         {
-                            label: "Weekly Earnings",
-                            val: loading ? "—" : fmt(stats?.weeklyEarnings ?? 0),
-                            icon: TrendingUp,
-                            color: "text-blue-400",
-                            bg: "bg-blue-500/10",
+                            label: "Balance",
+                            val: loading ? "—" : fmt(stats?.walletBalance ?? 0),
+                            icon: Wallet,
+                            color: "text-[#eb0000]",
+                            bg: "bg-[#eb0000]/10",
                             delay: 0.15,
+                            onClick: () => setPayoutModal(true)
                         },
                         {
                             label: "All-Time Drops",
@@ -388,8 +420,17 @@ export default function RiderCockpitPage() {
                             initial={{ opacity: 0, y: 16 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: s.delay }}
-                            className="bg-[#111118] border border-white/[0.06] rounded-[1.75rem] p-6 group hover:-translate-y-1 transition-all duration-300"
+                            className={cn(
+                                "bg-[#111118] border border-white/[0.06] rounded-[1.75rem] p-6 group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden",
+                                (s as any).onClick && "cursor-pointer hover:border-[#eb0000]/30"
+                            )}
+                            onClick={(s as any).onClick}
                         >
+                            {(s as any).onClick && (
+                                <div className="absolute top-4 right-4 text-[#eb0000] opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <ArrowUpRight className="w-4 h-4" />
+                                </div>
+                            )}
                             <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110", s.bg)}>
                                 <s.icon className={cn("w-5 h-5", s.color)} />
                             </div>
@@ -546,8 +587,107 @@ export default function RiderCockpitPage() {
                         </a>
                     ))}
                 </div>
-
             </div>
+
+            {/* ── Payout Modal ── */}
+            <AnimatePresence>
+                {payoutModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setPayoutModal(false)}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="relative w-full max-w-lg bg-[#111118] border border-white/10 rounded-[2.5rem] p-8 lg:p-10 overflow-hidden shadow-2xl"
+                        >
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-[#eb0000]/10 rounded-full blur-[80px] -mr-20 -mt-20" />
+
+                            <div className="relative z-10">
+                                <div className="flex items-center justify-between mb-8">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-2xl bg-[#eb0000]/10 flex items-center justify-center">
+                                            <CreditCard className="w-6 h-6 text-[#eb0000]" />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-white text-xl font-black">Request Payout</h2>
+                                            <p className="text-white/30 text-[10px] font-black uppercase tracking-widest">Withdraw Earnings</p>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => setPayoutModal(false)} className="text-white/20 hover:text-white transition-colors">
+                                        <Radio className="w-6 h-6" />
+                                    </button>
+                                </div>
+
+                                <form onSubmit={handlePayout} className="space-y-5">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] text-white/40 font-black uppercase tracking-widest ml-1">Amount to Withdraw (₦)</label>
+                                        <input
+                                            type="number"
+                                            required
+                                            placeholder="e.g. 5000"
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold focus:outline-none focus:border-[#eb0000]/40 transition-all"
+                                            value={payoutForm.amount}
+                                            onChange={e => setPayoutForm({ ...payoutForm, amount: e.target.value })}
+                                        />
+                                        <p className="text-[10px] text-white/20 ml-1">Available: {fmt(stats?.walletBalance ?? 0)}</p>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 gap-5">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] text-white/40 font-black uppercase tracking-widest ml-1">Bank Name</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                placeholder="e.g. Access Bank"
+                                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold focus:outline-none focus:border-[#eb0000]/40 transition-all"
+                                                value={payoutForm.bankName}
+                                                onChange={e => setPayoutForm({ ...payoutForm, bankName: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] text-white/40 font-black uppercase tracking-widest ml-1">Account Number</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                placeholder="10 digits"
+                                                maxLength={10}
+                                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold focus:outline-none focus:border-[#eb0000]/40 transition-all"
+                                                value={payoutForm.accountNumber}
+                                                onChange={e => setPayoutForm({ ...payoutForm, accountNumber: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] text-white/40 font-black uppercase tracking-widest ml-1">Account Holder Name</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                placeholder="As seen on bank app"
+                                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold focus:outline-none focus:border-[#eb0000]/40 transition-all"
+                                                value={payoutForm.accountName}
+                                                onChange={e => setPayoutForm({ ...payoutForm, accountName: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        type="submit"
+                                        disabled={isSubmitting}
+                                        className="w-full bg-[#eb0000] text-white py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-xs shadow-xl shadow-[#eb0000]/20 hover:bg-red-600 transition-all mt-4 flex items-center justify-center gap-2"
+                                    >
+                                        {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Confirm Payout"}
+                                    </button>
+                                </form>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

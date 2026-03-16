@@ -55,8 +55,11 @@ export async function getRiderDispatch(riderId: string) {
 export async function getRiderStats(riderId: string) {
     const supabase = await createServerSupabaseClient();
 
+    // 1. Get Rider User ID to fetch wallet
+    const { data: rider } = await (supabase as any).from("riders").select("user_id").eq("id", riderId).single();
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [{ data: completed }, { data: today }] = await Promise.all([
+    const [{ data: completed }, { data: today }, { data: wallet }] = await Promise.all([
         (supabase as any)
             .from("shipments")
             .select("id, created_at, service_type, declared_value, recipient_state, sender_state, status")
@@ -69,6 +72,7 @@ export async function getRiderStats(riderId: string) {
             .select("id, status")
             .eq("rider_id", riderId)
             .gte("created_at", new Date().toISOString().slice(0, 10) + "T00:00:00Z"),
+        rider?.user_id ? (supabase as any).from("wallets").select("balance").eq("user_id", rider.user_id).single() : Promise.resolve({ data: null })
     ]);
 
     const totalDeliveries = (completed ?? []).length;
@@ -94,6 +98,7 @@ export async function getRiderStats(riderId: string) {
         totalDeliveries,
         weeklyEarnings,
         todayDrops,
+        walletBalance: wallet?.balance ?? 0,
         history: completed ?? [],
     };
 }
@@ -205,6 +210,27 @@ export async function riderUpdateStatus(
         if (newStatus === "delivered") {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             await (supabase as any).rpc("increment_rider_deliveries", { shipment_id: shipmentId }).catch(() => { });
+
+            // ── Rider Earnings Logic ──
+            const RATE: Record<string, number> = {
+                same_day: 1200,
+                express: 1000,
+                standard: 800,
+                bulk: 600,
+            };
+            const earning = RATE[shipment.service_type] || 800;
+
+            // Get rider user_id to credit wallet
+            const { data: riderProfile } = await (supabase as any).from("riders").select("user_id").eq("id", shipment.rider_id).single();
+
+            if (riderProfile?.user_id) {
+                await (supabase as any).rpc("credit_rider_earnings", {
+                    p_user_id: riderProfile.user_id,
+                    p_amount: earning,
+                    p_shipment_id: shipmentId,
+                    p_tracking_id: shipment.tracking_id
+                });
+            }
         }
     } catch (notifyErr) {
         console.error("[RiderStatus] Notification failed:", notifyErr);
@@ -255,4 +281,31 @@ export async function updateRiderLocation(
     if (error) return { success: false, error: error.message };
     return { success: true, error: null };
 }
+
+/* ── Request Payout ─────────────────────────────────────────── */
+export async function requestPayout(data: {
+    amount: number;
+    bankName: string;
+    accountNumber: string;
+    accountName: string;
+}): Promise<{ success: boolean; error: string | null }> {
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: "Unauthorized" };
+
+    // RPC handles atomic debit + log + settlement creation
+    const { data: success, error } = await (supabase as any).rpc("request_rider_payout", {
+        p_user_id: user.id,
+        p_amount: data.amount,
+        p_bank_name: data.bankName,
+        p_account_number: data.accountNumber,
+        p_account_name: data.accountName
+    });
+
+    if (error) return { success: false, error: error.message };
+    if (!success) return { success: false, error: "Insufficient balance for this payout" };
+
+    return { success: true, error: null };
+}
+
 
