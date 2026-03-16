@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import {
     LayoutDashboard, Package, MessageSquare,
-    LogOut, ChevronRight, Menu, X, Shield, Users, Activity, Truck
+    LogOut, ChevronRight, Menu, X, Shield, Users, Activity, Truck, Terminal
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { signOut } from "@/app/actions/auth";
@@ -21,6 +21,7 @@ const navItems = [
     { label: "Finance Sync", href: "/admin/settlements", icon: Activity },
     { label: "Relay Comms", href: "/admin/contacts", icon: MessageSquare },
     { label: "Neural Audit", href: "/admin/verify", icon: Shield },
+    { label: "Engine Vault", href: "/admin/logs", icon: Terminal },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

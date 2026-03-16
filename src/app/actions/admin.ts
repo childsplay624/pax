@@ -377,3 +377,18 @@ export async function getPendingKYCProfiles() {
         .order("created_at", { ascending: false });
     return data || [];
 }
+/* ── System Logs ────────────────────────────────────────────── */
+export async function getSystemLogs(limit = 100, page = 0) {
+    const supabase = await requireAdmin();
+    const from = page * limit;
+    const to = from + limit - 1;
+
+    const { data, count, error } = await (supabase as any)
+        .from("system_logs")
+        .select("*", { count: "exact" })
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
+    if (error) throw new Error(error.message);
+    return { data: data || [], count: count ?? 0 };
+}

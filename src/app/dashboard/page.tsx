@@ -64,7 +64,7 @@ export default function DashboardPage() {
 
     const monthlyBars = stats?.monthly
         ? Object.entries(stats.monthly).slice(-6)
-        : [["Jan", 2], ["Feb", 3], ["Mar", 1], ["Apr", 4], ["May", 3], ["Jun", 5]];
+        : [];
     const maxBar = Math.max(...(monthlyBars as [string, number][]).map(([, v]) => v), 1);
 
     const quickActions = [

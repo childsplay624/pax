@@ -9,22 +9,15 @@ import { cn } from "@/lib/utils";
 type Stats = Awaited<ReturnType<typeof getDashboardStats>>;
 
 export default function AnalyticsPage() {
-    const [stats,   setStats]   = useState<Stats>(null);
+    const [stats, setStats] = useState<Stats>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         getDashboardStats().then(s => { setStats(s); setLoading(false); });
     }, []);
 
-    const monthly    = stats?.monthly ? Object.entries(stats.monthly) : [];
-    const maxVal     = Math.max(...monthly.map(([, v]) => Number(v)), 1);
-
-    const serviceBreakdown = [
-        { label: "Express",  pct: 42, color: "bg-red-brand"  },
-        { label: "Standard", pct: 31, color: "bg-blue-500"   },
-        { label: "Same Day", pct: 18, color: "bg-amber-500"  },
-        { label: "Bulk",     pct: 9,  color: "bg-purple-500" },
-    ];
+    const monthly = stats?.monthly ? Object.entries(stats.monthly) : [];
+    const maxVal = Math.max(...monthly.map(([, v]) => Number(v)), 1);
 
     const BOX = "bg-[#16161e] border border-white/[0.08] rounded-2xl overflow-hidden";
 
@@ -54,10 +47,10 @@ export default function AnalyticsPage() {
                         </div>
                     ))
                     : [
-                        { label: "Success Rate",  value: `${stats?.successRate ?? 0}%`,                       icon: TrendingUp, color: "text-emerald-400", bg: "bg-emerald-400/10" },
-                        { label: "Total Parcels", value: `${stats?.total ?? 0}`,                               icon: Package,    color: "text-blue-400",    bg: "bg-blue-400/10"    },
-                        { label: "Delivered",     value: `${stats?.delivered ?? 0}`,                           icon: BarChart3,  color: "text-purple-400",  bg: "bg-purple-400/10"  },
-                        { label: "Total Value",   value: `₦${((stats?.totalValue ?? 0) / 1000).toFixed(0)}K`, icon: MapPin,     color: "text-amber-400",   bg: "bg-amber-400/10"   },
+                        { label: "Success Rate", value: `${stats?.successRate ?? 0}%`, icon: TrendingUp, color: "text-emerald-400", bg: "bg-emerald-400/10" },
+                        { label: "Total Parcels", value: `${stats?.total ?? 0}`, icon: Package, color: "text-blue-400", bg: "bg-blue-400/10" },
+                        { label: "Delivered", value: `${stats?.delivered ?? 0}`, icon: BarChart3, color: "text-purple-400", bg: "bg-purple-400/10" },
+                        { label: "Total Value", value: `₦${((stats?.totalValue ?? 0) / 1000).toFixed(0)}K`, icon: MapPin, color: "text-amber-400", bg: "bg-amber-400/10" },
                     ].map((k, i) => (
                         <motion.div key={k.label}
                             initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
@@ -87,10 +80,7 @@ export default function AnalyticsPage() {
                     </div>
                     <div className="p-5">
                         <div className="flex items-end gap-3 h-40">
-                            {(monthly.length > 0
-                                ? monthly
-                                : [["Jan", 2], ["Feb", 4], ["Mar", 3], ["Apr", 6], ["May", 5], ["Jun", 7]] as [string, number][]
-                            ).map(([mo, val], i) => (
+                            {monthly.map(([mo, val], i) => (
                                 <div key={mo} className="flex-1 flex flex-col items-center gap-2">
                                     <motion.div
                                         className="w-full rounded-lg bg-gradient-to-t from-red-brand to-red-400/60 relative"
@@ -113,19 +103,35 @@ export default function AnalyticsPage() {
                         <p className="text-white font-bold text-sm" style={{ fontFamily: "Space Grotesk, sans-serif" }}>By Service Type</p>
                     </div>
                     <div className="p-5 space-y-4">
-                        {serviceBreakdown.map((s, i) => (
-                            <div key={s.label}>
-                                <div className="flex items-center justify-between mb-1.5">
-                                    <span className="text-white/50 text-xs font-semibold">{s.label}</span>
-                                    <span className="text-white/70 text-xs font-bold">{s.pct}%</span>
+                        {loading ? (
+                            Array.from({ length: 3 }).map((_, i) => (
+                                <div key={i} className="space-y-2">
+                                    <div className="h-3 w-20 bg-white/10 rounded" />
+                                    <div className="h-2 bg-white/5 rounded-full" />
                                 </div>
-                                <div className="h-2 bg-white/[0.06] rounded-full overflow-hidden">
-                                    <motion.div className={cn("h-full rounded-full", s.color)}
-                                        initial={{ width: 0 }} animate={{ width: `${s.pct}%` }}
-                                        transition={{ delay: i * 0.1 + 0.2, duration: 0.7, ease: [0.16, 1, 0.3, 1] }} />
-                                </div>
+                            ))
+                        ) : !stats?.services?.length ? (
+                            <div className="text-center py-10">
+                                <p className="text-white/20 text-xs font-semibold">No service data</p>
                             </div>
-                        ))}
+                        ) : (
+                            stats.services.map((s: any, i: number) => {
+                                const COLORS = ["bg-red-brand", "bg-blue-500", "bg-amber-500", "bg-purple-500", "bg-emerald-500"];
+                                return (
+                                    <div key={s.label}>
+                                        <div className="flex items-center justify-between mb-1.5">
+                                            <span className="text-white/50 text-xs font-semibold">{s.label}</span>
+                                            <span className="text-white/70 text-xs font-bold">{s.pct}%</span>
+                                        </div>
+                                        <div className="h-2 bg-white/[0.06] rounded-full overflow-hidden">
+                                            <motion.div className={cn("h-full rounded-full", COLORS[i % COLORS.length])}
+                                                initial={{ width: 0 }} animate={{ width: `${s.pct}%` }}
+                                                transition={{ delay: i * 0.1 + 0.2, duration: 0.7, ease: [0.16, 1, 0.3, 1] }} />
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
                     </div>
                 </div>
 
@@ -147,13 +153,7 @@ export default function AnalyticsPage() {
                                     <div className="h-3 w-20 bg-white/[0.06] rounded" />
                                 </div>
                             ))
-                            : (stats?.topStates.length ? stats.topStates : [
-                                { state: "Lagos",      count: 4 },
-                                { state: "Abuja (FCT)", count: 2 },
-                                { state: "Rivers",     count: 1 },
-                                { state: "Oyo",        count: 1 },
-                                { state: "Kano",       count: 1 },
-                            ]).map((s, i) => (
+                            : (stats?.topStates || []).map((s, i) => (
                                 <motion.div key={s.state}
                                     initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: i * 0.06 }}

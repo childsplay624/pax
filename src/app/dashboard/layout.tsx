@@ -23,12 +23,14 @@ const NAV = [
     { label: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
+import { NotificationBell } from "@/components/NotificationBell";
+import { PushSubscriptionManager } from "@/components/PushSubscriptionManager";
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const router = useRouter();
     const [user, setUser] = useState<{ email: string; name: string } | null>(null);
     const [open, setOpen] = useState(false);
-    const [notifs, setNotifs] = useState(3);
 
     useEffect(() => {
         supabase.auth.getUser().then(async ({ data }) => {
@@ -72,14 +74,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         <p className="text-white/30 text-[10px] uppercase tracking-widest font-semibold">Merchant Portal</p>
                     </div>
                 </Link>
-                <button className="relative text-white/40 hover:text-white transition-colors" onClick={() => setNotifs(0)}>
-                    <Bell className="w-4 h-4" />
-                    {notifs > 0 && (
-                        <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-brand rounded-full text-[8px] text-white font-bold flex items-center justify-center">
-                            {notifs}
-                        </span>
-                    )}
-                </button>
+                <NotificationBell />
             </div>
 
             {/* Nav */}
@@ -152,9 +147,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     </div>
                     <span className="text-white font-bold text-sm" style={{ fontFamily: "Space Grotesk, sans-serif" }}>PAX Business</span>
                 </div>
-                <button onClick={() => setOpen(!open)} className="text-white/60 hover:text-white transition-colors p-1">
-                    {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-                </button>
+                <div className="flex items-center gap-2">
+                    <NotificationBell />
+                    <button onClick={() => setOpen(!open)} className="text-white/60 hover:text-white transition-colors p-1">
+                        {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                    </button>
+                </div>
             </div>
 
             {/* ── Mobile slide-over ── */}
@@ -208,6 +206,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     </div>
                 </div>
             </main>
+            <PushSubscriptionManager />
         </div>
     );
 }

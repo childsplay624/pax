@@ -95,6 +95,13 @@ export async function initializeShipmentPayment(shipmentId: string, amountNaira:
     };
 }
 
+import {
+    sendBookingConfirmationSMS,
+    sendWalletCreditedSMS
+} from "@/app/actions/notifications";
+
+import { triggerNotification } from "@/app/actions/notifications";
+
 /* ── Verify a Paystack callback and credit the wallet ────────────
    Called from the /dashboard/wallet/verify route after redirect.
 ──────────────────────────────────────────────────────────────── */
@@ -124,7 +131,7 @@ export async function verifyAndCreditWallet(reference: string): Promise<{
         return { success: false, amount: 0, error: "User mismatch — cannot credit wallet" };
     }
 
-    // Idempotency check — make sure we haven't processed this reference before
+    // Idempotency check 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: existing } = await (supabase as any)
         .from("wallet_transactions")
@@ -133,12 +140,12 @@ export async function verifyAndCreditWallet(reference: string): Promise<{
         .single();
 
     if (existing) {
-        return { success: true, amount: amountNaira, error: null }; // Already processed
+        return { success: true, amount: amountNaira, error: null };
     }
 
     // Credit the wallet balance
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any).rpc("increment_wallet_balance", {
+    const { data: balance } = await (supabase as any).rpc("increment_wallet_balance", {
         p_user_id: user.id,
         p_amount: amountNaira,
     });
@@ -153,6 +160,25 @@ export async function verifyAndCreditWallet(reference: string): Promise<{
         description: "Wallet Top-up via Paystack",
         status: "success",
     });
+
+    // Send multi-channel notification
+    try {
+        const { data: p } = await (supabase.from("profiles") as any).select("full_name, phone").eq("id", user.id).single();
+        const fmt = (n: number) => `₦${n.toLocaleString("en-NG")}`;
+
+        const smsMsg = `Hi ${p?.full_name?.split(" ")[0] || "Merchant"}, your PAX Business Wallet has been credited with ${fmt(amountNaira)}. New Balance: ${fmt(balance || 0)}.`;
+        await triggerNotification(user.id, {
+            title: "Wallet Funded",
+            message: `Your PAX Business wallet has been credited with ${fmt(amountNaira)}.`,
+            type: "success",
+            url: "/dashboard/wallet",
+            phone: p?.phone,
+            smsMessage: smsMsg,
+            whatsappMessage: smsMsg
+        });
+    } catch (err) {
+        console.error("[WalletNotification] Failed:", err);
+    }
 
     return { success: true, amount: amountNaira, error: null };
 }
@@ -173,6 +199,10 @@ export async function verifyShipmentPayment(reference: string): Promise<{ succes
     const shipmentId = json.data.metadata?.shipment_id;
     if (!shipmentId) return { success: false, error: "Missing shipment ID in metadata" };
 
+    // Fetch shipment before update
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: s } = await (supabase as any).from("shipments").select("*").eq("id", shipmentId).single();
+
     // Update shipment status to 'confirmed'
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase as any)
@@ -182,12 +212,30 @@ export async function verifyShipmentPayment(reference: string): Promise<{ succes
 
     if (error) return { success: false, error: error.message };
 
+    // Trigger Multi-channel Notification
+    if (s) {
+        try {
+            const eta = new Date(s.estimated_delivery).toLocaleDateString("en-NG", { day: "2-digit", month: "short" });
+            const smsMsg = `Hi ${s.sender_name.split(" ")[0]}, your PAX shipment is confirmed! Tracking ID: ${s.tracking_id}. Route: ${s.origin_city} ➜ ${s.destination_city}. ETA: ${eta}. Track: https://panafricanexpress.ng/tracking?id=${s.tracking_id}`;
+
+            await triggerNotification(s.user_id || null, {
+                title: "Shipment Confirmed",
+                message: `Payment received for ${s.tracking_id}. We are assigning a rider for collection.`,
+                type: "success",
+                url: `/tracking?id=${s.tracking_id}`,
+                phone: s.sender_phone,
+                smsMessage: smsMsg,
+                whatsappMessage: smsMsg.replace(s.tracking_id, `*${s.tracking_id}*`)
+            });
+        } catch (err) {
+            console.error("[ShipmentNotification] Failed:", err);
+        }
+    }
+
     return { success: true, error: null };
 }
 
-/* ── Paystack Webhook handler (called from API route) ────────────
-   Validates the Paystack signature and processes the event.        
-──────────────────────────────────────────────────────────────── */
+/* ── Paystack Webhook handler (called from API route) ──────────── */
 export async function processPaystackWebhook(payload: string, signature: string): Promise<boolean> {
     const crypto = await import("crypto");
     const hash = crypto
@@ -195,7 +243,7 @@ export async function processPaystackWebhook(payload: string, signature: string)
         .update(payload)
         .digest("hex");
 
-    if (hash !== signature) return false; // Invalid signature
+    if (hash !== signature) return false;
 
     const event = JSON.parse(payload);
 

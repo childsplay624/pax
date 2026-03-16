@@ -11,6 +11,7 @@ function generateTrackingId(): string {
 
 import { calculatePrice } from "@/lib/pricing";
 import { initializeShipmentPayment } from "@/app/actions/payments";
+import { triggerNotification } from "@/app/actions/notifications";
 
 /* ── Create new shipment (booking) ───────────────────────────── */
 export async function createShipment(data: {
@@ -81,6 +82,26 @@ export async function createShipment(data: {
     const estimated_delivery = new Date(
         Date.now() + (hoursMap[data.service_type] ?? 72) * 3600 * 1000
     ).toISOString();
+
+    // Trigger Unified Notifications for Business Prepaid
+    if (is_prepaid && user) {
+        try {
+            const eta = new Date(estimated_delivery).toLocaleDateString("en-NG", { day: "2-digit", month: "short" });
+            const smsMsg = `Hi ${data.sender_name.split(" ")[0]}, your PAX shipment is confirmed! Tracking ID: ${tracking_id}. Route: ${data.origin_city} ➜ ${data.destination_city}. ETA: ${eta}. Track: https://panafricanexpress.ng/tracking?id=${tracking_id}`;
+
+            await triggerNotification(user.id, {
+                title: "Booking Confirmed",
+                message: `Shipment ${tracking_id} has been successfully booked from your wallet.`,
+                type: "success",
+                url: `/tracking?id=${tracking_id}`,
+                phone: data.sender_phone,
+                smsMessage: smsMsg,
+                whatsappMessage: smsMsg.replace(tracking_id, `*${tracking_id}*`)
+            });
+        } catch (notifyErr) {
+            console.error("[BookingNotification] Failed:", notifyErr);
+        }
+    }
 
     // 3. Create Shipment
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

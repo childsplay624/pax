@@ -37,7 +37,7 @@ BEGIN
     -- Fetch the tracking events
     SELECT json_agg(row_to_json(e)) INTO v_events
     FROM (
-        SELECT id, tracking_id, status, "location", "desc", status_time, sort_order, "status" as ev_status
+        SELECT id, tracking_id, status, event_title, event_location, event_description, event_date, event_time, sort_order
         FROM tracking_events
         WHERE tracking_id = p_tracking_id
         ORDER BY sort_order ASC

@@ -57,7 +57,19 @@ export async function getDashboardStats() {
         .sort((a, b) => b[1] - a[1]).slice(0, 5)
         .map(([state, count]) => ({ state, count }));
 
-    return { total, delivered, active, failed, totalValue, successRate, monthly, topStates };
+    // Service Type distribution
+    const serviceCount: Record<string, number> = {};
+    shipments.forEach(s => {
+        const type = s.service_type || "standard";
+        serviceCount[type] = (serviceCount[type] || 0) + 1;
+    });
+    const services = Object.entries(serviceCount).map(([label, count]) => ({
+        label: label.replace("_", " ").replace(/\b\w/g, c => c.toUpperCase()),
+        count,
+        pct: total > 0 ? Math.round((count / total) * 100) : 0
+    })).sort((a, b) => b.count - a.count);
+
+    return { total, delivered, active, failed, totalValue, successRate, monthly, topStates, services };
 }
 
 /* ── Get all shipments (paginated) ──────────────────────────── */
