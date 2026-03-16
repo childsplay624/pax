@@ -53,7 +53,8 @@ CREATE OR REPLACE FUNCTION public.request_rider_payout(
     p_amount  NUMERIC,
     p_bank_name TEXT,
     p_account_number TEXT,
-    p_account_name TEXT
+    p_account_name TEXT,
+    p_bank_code TEXT
 )
 RETURNS BOOLEAN
 LANGUAGE plpgsql
@@ -95,10 +96,10 @@ BEGIN
 
     -- 4. Create Settlement Record for Admin
     INSERT INTO public.settlements (
-        user_id, amount, bank_name, account_number, account_name, status
+        user_id, amount, bank_name, account_number, account_name, bank_code, status
     )
     VALUES (
-        p_user_id, p_amount, p_bank_name, p_account_number, p_account_name, 'pending'
+        p_user_id, p_amount, p_bank_name, p_account_number, p_account_name, p_bank_code, 'pending'
     );
 
     RETURN TRUE;

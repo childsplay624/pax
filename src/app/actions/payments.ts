@@ -285,3 +285,61 @@ export async function resolveAccount(accountNumber: string, bankCode: string): P
     return { account_name: json.data.account_name, error: null };
 }
 
+/* ── Create Transfer Recipient (Paystack) ─────────────────── */
+export async function createTransferRecipient(data: {
+    name: string;
+    accountNumber: string;
+    bankCode: string;
+}): Promise<{ recipient_code: string | null; error: string | null }> {
+    const res = await fetch(`${PAYSTACK_BASE}/transferrecipient`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${PAYSTACK_SECRET}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            type: "nuban",
+            name: data.name,
+            account_number: data.accountNumber,
+            bank_code: data.bankCode,
+            currency: "NGN",
+        }),
+    });
+    const json = await res.json();
+
+    if (!res.ok || !json.status) {
+        return { recipient_code: null, error: json.message || "Failed to create recipient" };
+    }
+
+    return { recipient_code: json.data.recipient_code, error: null };
+}
+
+/* ── Initiate Transfer (Paystack) ─────────────────────────── */
+export async function initiateTransfer(data: {
+    amount: number;
+    recipientCode: string;
+    reason: string;
+}): Promise<{ transfer_code: string | null; error: string | null }> {
+    const res = await fetch(`${PAYSTACK_BASE}/transfer`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${PAYSTACK_SECRET}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            source: "balance",
+            amount: data.amount * 100, // Kobo
+            recipient: data.recipientCode,
+            reason: data.reason,
+        }),
+    });
+    const json = await res.json();
+
+    if (!res.ok || !json.status) {
+        return { transfer_code: null, error: json.message || "Transfer initiation failed" };
+    }
+
+    return { transfer_code: json.data.transfer_code, error: null };
+}
+
+

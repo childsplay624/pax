@@ -2,6 +2,7 @@
 
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { sendStatusUpdateSMS, sendDeliveredSMS } from "@/app/actions/notifications";
+import { createTransferRecipient, initiateTransfer } from "@/app/actions/payments";
 
 /* ── Authorization Helper ────────────────────────────────────────── */
 async function requireAdmin() {
@@ -351,17 +352,51 @@ export async function getSettlements(status?: string) {
 export async function updateAdminSettlementStatus(id: string, status: "completed" | "failed" | "processing") {
     const supabase = await requireAdmin();
 
-    // 1. Update Settlement
-    const { data: settlement, error } = await (supabase as any)
+    // 1. Get the settlement record first
+    const { data: settlement } = await (supabase as any)
         .from("settlements")
-        .update({ status, updated_at: new Date().toISOString() })
+        .select("*")
         .eq("id", id)
-        .select()
         .single();
 
-    if (error) return { success: false, error: error.message };
+    if (!settlement) return { success: false, error: "Settlement not found" };
 
-    // 2. Sync with Wallet Transaction if completed or failed
+    // 2. Automated Paystack Transfer Logic (Only if status is being set to COMPLETED)
+    if (status === "completed" && settlement.status !== "completed") {
+        try {
+            // A. Create/Verify Transfer Recipient
+            const recipient = await createTransferRecipient({
+                name: settlement.account_name || "Rider Payout",
+                accountNumber: settlement.account_number,
+                bankCode: settlement.bank_code || ""
+            });
+
+            if (recipient.error) return { success: false, error: `Paystack Recipient Error: ${recipient.error}` };
+
+            // B. Initiate Transfer
+            const transfer = await initiateTransfer({
+                amount: settlement.amount,
+                recipientCode: recipient.recipient_code!,
+                reason: `PAX Payout: ${settlement.id.slice(0, 8)}`
+            });
+
+            if (transfer.error) return { success: false, error: `Paystack Transfer Error: ${transfer.error}` };
+
+            // Note: If we got here, Paystack has accepted the transfer request.
+        } catch (paystackErr: any) {
+            return { success: false, error: `Paystack Automation Failed: ${paystackErr.message}` };
+        }
+    }
+
+    // 3. Update Settlement in DB
+    const { error: updateErr } = await (supabase as any)
+        .from("settlements")
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq("id", id);
+
+    if (updateErr) return { success: false, error: updateErr.message };
+
+    // 4. Sync with Wallet Transaction if completed or failed
     if (status === "completed" || status === "failed") {
         await (supabase as any)
             .from("wallet_transactions")

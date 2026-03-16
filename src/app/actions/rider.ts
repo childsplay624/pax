@@ -288,6 +288,7 @@ export async function requestPayout(data: {
     bankName: string;
     accountNumber: string;
     accountName: string;
+    bankCode: string;
 }): Promise<{ success: boolean; error: string | null }> {
     const supabase = await createServerSupabaseClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -299,7 +300,8 @@ export async function requestPayout(data: {
         p_amount: data.amount,
         p_bank_name: data.bankName,
         p_account_number: data.accountNumber,
-        p_account_name: data.accountName
+        p_account_name: data.accountName,
+        p_bank_code: data.bankCode
     });
 
     if (error) return { success: false, error: error.message };

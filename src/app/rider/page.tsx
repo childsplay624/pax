@@ -186,7 +186,8 @@ export default function RiderCockpitPage() {
                 amount: parseFloat(payoutForm.amount),
                 bankName: payoutForm.bankName,
                 accountNumber: payoutForm.accountNumber,
-                accountName: payoutForm.accountName
+                accountName: payoutForm.accountName,
+                bankCode: payoutForm.bankCode
             });
 
             if (res.success) {
