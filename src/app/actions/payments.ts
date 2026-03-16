@@ -258,3 +258,30 @@ export async function processPaystackWebhook(payload: string, signature: string)
 
     return true;
 }
+
+/* ── List Banks (Paystack) ─────────────────────────────────── */
+export async function listBanks(): Promise<any[]> {
+    const res = await fetch(`${PAYSTACK_BASE}/bank?country=nigeria&currency=NGN`, {
+        headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` },
+    });
+    const json = await res.json();
+    return json.status ? json.data : [];
+}
+
+/* ── Resolve Account Number (Paystack) ─────────────────────── */
+export async function resolveAccount(accountNumber: string, bankCode: string): Promise<{
+    account_name: string | null;
+    error: string | null;
+}> {
+    const res = await fetch(`${PAYSTACK_BASE}/bank/resolve?account_number=${accountNumber}&bank_code=${bankCode}`, {
+        headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` },
+    });
+    const json = await res.json();
+
+    if (!res.ok || !json.status) {
+        return { account_name: null, error: json.message || "Could not resolve account name" };
+    }
+
+    return { account_name: json.data.account_name, error: null };
+}
+

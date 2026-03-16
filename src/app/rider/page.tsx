@@ -12,6 +12,7 @@ import {
 import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import { setRiderStatus, getRiderStats, updateRiderLocation, requestPayout } from "@/app/actions/rider";
+import { listBanks, resolveAccount } from "@/app/actions/payments";
 import { cn } from "@/lib/utils";
 
 const STATUS_LABEL: Record<string, { label: string; color: string; glow: string }> = {
@@ -31,8 +32,10 @@ export default function RiderCockpitPage() {
     const [isWakeLockActive, setIsWakeLockActive] = useState(false);
     const [wakeLock, setWakeLock] = useState<any>(null);
     const [payoutModal, setPayoutModal] = useState(false);
-    const [payoutForm, setPayoutForm] = useState({ amount: "", bankName: "", accountNumber: "", accountName: "" });
+    const [payoutForm, setPayoutForm] = useState({ amount: "", bankName: "", bankCode: "", accountNumber: "", accountName: "" });
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [banks, setBanks] = useState<any[]>([]);
+    const [isResolving, setIsResolving] = useState(false);
 
     const load = async () => {
         setLoading(true);
@@ -60,7 +63,30 @@ export default function RiderCockpitPage() {
 
     useEffect(() => {
         load();
+        const getBanks = async () => {
+            const b = await listBanks();
+            setBanks(b);
+        };
+        getBanks();
     }, []);
+
+    // ── Real-time Account Resolution ──
+    useEffect(() => {
+        const resolve = async () => {
+            if (payoutForm.accountNumber.length === 10 && payoutForm.bankCode) {
+                setIsResolving(true);
+                const res = await resolveAccount(payoutForm.accountNumber, payoutForm.bankCode);
+                if (res.account_name) {
+                    setPayoutForm(p => ({ ...p, accountName: res.account_name || "" }));
+                } else {
+                    setPayoutForm(p => ({ ...p, accountName: "" }));
+                    showToast("❌ Could not verify this account");
+                }
+                setIsResolving(false);
+            }
+        };
+        resolve();
+    }, [payoutForm.accountNumber, payoutForm.bankCode]);
 
     // ── Real-time Location Heartbeat ──
     useEffect(() => {
@@ -640,38 +666,49 @@ export default function RiderCockpitPage() {
 
                                     <div className="grid grid-cols-1 gap-5">
                                         <div className="space-y-2">
-                                            <label className="text-[10px] text-white/40 font-black uppercase tracking-widest ml-1">Bank Name</label>
-                                            <input
-                                                type="text"
+                                            <label className="text-[10px] text-white/40 font-black uppercase tracking-widest ml-1">Select Bank</label>
+                                            <select
                                                 required
-                                                placeholder="e.g. Access Bank"
-                                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold focus:outline-none focus:border-[#eb0000]/40 transition-all"
-                                                value={payoutForm.bankName}
-                                                onChange={e => setPayoutForm({ ...payoutForm, bankName: e.target.value })}
-                                            />
+                                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold focus:outline-none focus:border-[#eb0000]/40 transition-all appearance-none cursor-pointer"
+                                                value={payoutForm.bankCode}
+                                                onChange={e => {
+                                                    const b = banks.find(x => x.code === e.target.value);
+                                                    setPayoutForm({ ...payoutForm, bankCode: e.target.value, bankName: b?.name || "" });
+                                                }}
+                                            >
+                                                <option value="" className="bg-[#111118]">Choose Bank</option>
+                                                {banks.map(b => (
+                                                    <option key={b.code} value={b.code} className="bg-[#111118]">{b.name}</option>
+                                                ))}
+                                            </select>
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-[10px] text-white/40 font-black uppercase tracking-widest ml-1">Account Number</label>
-                                            <input
-                                                type="text"
-                                                required
-                                                placeholder="10 digits"
-                                                maxLength={10}
-                                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold focus:outline-none focus:border-[#eb0000]/40 transition-all"
-                                                value={payoutForm.accountNumber}
-                                                onChange={e => setPayoutForm({ ...payoutForm, accountNumber: e.target.value })}
-                                            />
+                                            <div className="relative">
+                                                <input
+                                                    type="text"
+                                                    required
+                                                    placeholder="10 digits"
+                                                    maxLength={10}
+                                                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold focus:outline-none focus:border-[#eb0000]/40 transition-all"
+                                                    value={payoutForm.accountNumber}
+                                                    onChange={e => setPayoutForm({ ...payoutForm, accountNumber: e.target.value.replace(/\D/g, "") })}
+                                                />
+                                                {isResolving && (
+                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                                                        <Loader2 className="w-4 h-4 text-[#eb0000] animate-spin" />
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[10px] text-white/40 font-black uppercase tracking-widest ml-1">Account Holder Name</label>
-                                            <input
-                                                type="text"
-                                                required
-                                                placeholder="As seen on bank app"
-                                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold focus:outline-none focus:border-[#eb0000]/40 transition-all"
-                                                value={payoutForm.accountName}
-                                                onChange={e => setPayoutForm({ ...payoutForm, accountName: e.target.value })}
-                                            />
+                                            <label className="text-[10px] text-white/40 font-black uppercase tracking-widest ml-1">Verified Name</label>
+                                            <div className={cn(
+                                                "w-full bg-white/[0.02] border border-white/5 rounded-2xl px-5 py-4 text-white/50 font-bold",
+                                                payoutForm.accountName && "text-emerald-400 border-emerald-500/20 bg-emerald-500/5 transition-all"
+                                            )}>
+                                                {payoutForm.accountName || (isResolving ? "Verifying..." : "Awaiting details...")}
+                                            </div>
                                         </div>
                                     </div>
 
