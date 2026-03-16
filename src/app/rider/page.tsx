@@ -6,7 +6,8 @@ import {
     Zap, Star, CheckCircle2, Package, MapPin,
     ArrowRight, TrendingUp, Bike, Truck,
     ToggleLeft, ToggleRight, Loader2, Navigation,
-    Clock, ChevronRight, Radio, Shield, Activity
+    Clock, ChevronRight, Radio, Shield, Activity,
+    Sun, Moon
 } from "lucide-react";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase";
@@ -27,6 +28,8 @@ export default function RiderCockpitPage() {
     const [isPending, start] = useTransition();
     const [toast, setToast] = useState<string | null>(null);
     const [locationError, setLocationError] = useState<string | null>(null);
+    const [isWakeLockActive, setIsWakeLockActive] = useState(false);
+    const [wakeLock, setWakeLock] = useState<any>(null);
 
     useEffect(() => {
         const load = async () => {
@@ -82,6 +85,47 @@ export default function RiderCockpitPage() {
 
         return () => navigator.geolocation.clearWatch(watchId);
     }, [rider?.id, rider?.status]);
+
+    // ── Screen Wake Lock (Keep Screen On) ──
+    const toggleWakeLock = async () => {
+        if (!("wakeLock" in navigator)) {
+            showToast("⚠️ Wake Lock not supported on this browser");
+            return;
+        }
+
+        try {
+            if (!isWakeLockActive) {
+                const lock = await (navigator as any).wakeLock.request("screen");
+                setWakeLock(lock);
+                setIsWakeLockActive(true);
+                showToast("☀️ Navigation Mode: Screen will stay on");
+
+                lock.addEventListener("release", () => {
+                    setIsWakeLockActive(false);
+                });
+            } else {
+                await wakeLock?.release();
+                setWakeLock(null);
+                setIsWakeLockActive(false);
+                showToast("🌙 Standard Mode: Screen will sleep");
+            }
+        } catch (err) {
+            console.error("Wake Lock error:", err);
+            showToast("🚨 Failed to enable Navigation Mode");
+        }
+    };
+
+    // Re-acquire wake lock if tab becomes visible again
+    useEffect(() => {
+        const handleVisibilityChange = async () => {
+            if (wakeLock !== null && document.visibilityState === "visible" && isWakeLockActive) {
+                const lock = await (navigator as any).wakeLock.request("screen");
+                setWakeLock(lock);
+            }
+        };
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+    }, [wakeLock, isWakeLockActive]);
 
     const handleToggle = () => {
         if (!rider) return;
@@ -245,6 +289,23 @@ export default function RiderCockpitPage() {
                                                 )}
                                             </div>
                                         )}
+
+                                        {/* Wake Lock Toggle */}
+                                        <button
+                                            onClick={toggleWakeLock}
+                                            className={cn(
+                                                "flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all",
+                                                isWakeLockActive
+                                                    ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                                                    : "bg-white/5 text-white/30 border border-white/5 hover:bg-white/10"
+                                            )}
+                                        >
+                                            {isWakeLockActive ? (
+                                                <><Sun className="w-3 h-3" /> Screen Locked On</>
+                                            ) : (
+                                                <><Moon className="w-3 h-3" /> Screen Auto-Sleep</>
+                                            )}
+                                        </button>
                                     </div>
                                 </>
                             )}
