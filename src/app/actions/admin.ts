@@ -339,8 +339,8 @@ export async function getSettlements(status?: string) {
     let query = (supabase as any)
         .from("settlements")
         .select(`
-            id, amount, status, created_at, user_id, type,
-            profiles ( full_name, role_details )
+            *,
+            profiles:user_id ( full_name, phone )
         `)
         .order("created_at", { ascending: false });
     if (status && status !== "all") query = query.eq("status", status);
@@ -348,13 +348,32 @@ export async function getSettlements(status?: string) {
     return data || [];
 }
 
-export async function updateAdminSettlementStatus(id: string, status: string) {
+export async function updateAdminSettlementStatus(id: string, status: "completed" | "failed" | "processing") {
     const supabase = await requireAdmin();
-    const { error } = await (supabase as any)
+
+    // 1. Update Settlement
+    const { data: settlement, error } = await (supabase as any)
         .from("settlements")
-        .update({ status })
-        .eq("id", id);
-    return { success: !error, error: error?.message || null };
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq("id", id)
+        .select()
+        .single();
+
+    if (error) return { success: false, error: error.message };
+
+    // 2. Sync with Wallet Transaction if completed or failed
+    if (status === "completed" || status === "failed") {
+        await (supabase as any)
+            .from("wallet_transactions")
+            .update({ status })
+            .eq("user_id", settlement.user_id)
+            .eq("type", "debit")
+            .eq("amount", settlement.amount)
+            .order("created_at", { ascending: false })
+            .limit(1);
+    }
+
+    return { success: true, error: null };
 }
 
 /* ── Shipments ──────────────────────────────────────────────── */
@@ -392,3 +411,4 @@ export async function getSystemLogs(limit = 100, page = 0) {
     if (error) throw new Error(error.message);
     return { data: data || [], count: count ?? 0 };
 }
+
