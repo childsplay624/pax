@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Package, MapPin, Clock, ChevronRight, LogOut, User, ArrowRight, CheckCircle2, Truck, AlertCircle, Plus, Search, Wallet, ShieldCheck, Heart } from "lucide-react";
+import { Package, MapPin, Clock, ChevronRight, LogOut, User, ArrowRight, CheckCircle2, Truck, AlertCircle, Plus, Search, Wallet, ShieldCheck, Heart, Bike, Zap } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { signOut } from "@/app/actions/auth";
 import { cn } from "@/lib/utils";
@@ -44,7 +44,7 @@ const ACCENT_BAR = "w-1.5 h-5 rounded-full";
 
 export default function AccountPage() {
     const router = useRouter();
-    const [user, setUser] = useState<{ email: string; id: string; name: string } | null>(null);
+    const [user, setUser] = useState<{ email: string; id: string; name: string; role?: string } | null>(null);
     const [shipments, setShipments] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -56,6 +56,14 @@ export default function AccountPage() {
                 id: data.user.id,
                 name: (data.user.user_metadata?.full_name as string) || data.user.email?.split("@")[0] || "User"
             });
+
+            // Fetch profile for role
+            (supabase.from("profiles") as any).select("account_type").eq("id", data.user.id).single()
+                .then((res: any) => {
+                    if (res.data) {
+                        setUser(u => u ? { ...u, role: res.data.account_type } : null);
+                    }
+                });
 
             supabase
                 .from("shipments")
@@ -273,6 +281,24 @@ export default function AccountPage() {
                                 Explore Business Account
                             </Link>
                         </div>
+
+                        {/* Become a Rider CTA */}
+                        {user?.role !== "rider" && (
+                            <div className={cn(BOX, "p-8 bg-gradient-to-br from-red-600 to-rose-700 border-none relative overflow-hidden group shadow-xl shadow-red-900/10")}>
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-3xl" />
+                                <div className="absolute bottom-0 left-0 w-24 h-24 bg-rose-400/20 rounded-full -ml-12 -mb-12 blur-2xl" />
+                                
+                                <Bike className="w-8 h-8 text-white/40 mb-4 group-hover:-rotate-12 transition-transform" />
+                                <h3 className="text-white font-bold text-xl leading-tight mb-2" style={{ fontFamily: "Space Grotesk, sans-serif" }}>
+                                    Want to Earn?<br />Join the Fleet.
+                                </h3>
+                                <p className="text-white/60 text-xs leading-relaxed mb-6 font-medium">Become a PAX Rider today. Flexible hours, great earnings, and instant payouts.</p>
+                                <Link href="/dashboard/riders/apply" 
+                                    className="bg-white text-rose-700 px-6 py-2.5 rounded-full font-bold text-xs shadow-lg shadow-black/10 hover:shadow-black/20 transition-all active:scale-95 flex items-center justify-center gap-2 group/btn">
+                                    Become a Rider <Zap className="w-3.5 h-3.5 group-hover/btn:animate-pulse" />
+                                </Link>
+                            </div>
+                        )}
 
                     </div>
 
