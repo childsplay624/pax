@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
     LayoutDashboard, Package, Wallet, BarChart3,
     Settings, LogOut, Menu, X, ChevronRight,
-    Store, Bell, ExternalLink, Code2, Zap
+    Store, Bell, ExternalLink, Code2, Zap, Bike
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { signOut } from "@/app/actions/auth";
@@ -29,7 +29,7 @@ import { PushSubscriptionManager } from "@/components/PushSubscriptionManager";
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const router = useRouter();
-    const [user, setUser] = useState<{ email: string; name: string } | null>(null);
+    const [user, setUser] = useState<{ email: string; name: string; role?: string } | null>(null);
     const [open, setOpen] = useState(false);
 
     useEffect(() => {
@@ -51,6 +51,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             if (profile?.account_type === "business" && !profile?.phone) {
                 router.push("/dashboard/onboarding");
             }
+
+            setUser(u => u ? { ...u, role: profile?.account_type } : null);
         });
     }, [router, pathname]);
 
@@ -110,6 +112,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <span className="flex-1">Track Parcel</span>
                     <ExternalLink className="w-3 h-3 opacity-40" />
                 </Link>
+
+                {user?.role !== "rider" && (
+                    <Link href="/dashboard/riders/apply" onClick={() => setOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-red-brand/70 hover:text-red-brand hover:bg-red-brand/5 transition-all mt-2 border border-red-brand/10">
+                        <Bike className="w-4 h-4" />
+                        <span className="flex-1">Become a Rider</span>
+                        <Zap className="w-3 h-3 animate-pulse" />
+                    </Link>
+                )}
             </nav>
 
             {/* User / sign-out */}

@@ -21,6 +21,7 @@ const navItems = [
     { label: "Finance Sync", href: "/admin/settlements", icon: Activity },
     { label: "Relay Comms", href: "/admin/contacts", icon: MessageSquare },
     { label: "Neural Audit", href: "/admin/verify", icon: Shield },
+    { label: "Rider Registry", href: "/admin/riders/applications", icon: Truck },
     { label: "Engine Vault", href: "/admin/logs", icon: Terminal },
 ];
 

@@ -310,4 +310,50 @@ export async function requestPayout(data: {
     return { success: true, error: null };
 }
 
+/* ── Submit Rider Application ───────────────────────────────── */
+export async function submitRiderApplication(data: {
+    full_name: string;
+    email: string;
+    phone: string;
+    address: string;
+    city: string;
+    state: string;
+    vehicle_type: string;
+    vehicle_reg_number?: string;
+    id_type: string;
+    id_number: string;
+    id_image_url?: string;
+}): Promise<{ success: boolean; error: string | null }> {
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: "Unauthorized" };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
+        .from("rider_applications")
+        .upsert({
+            user_id: user.id,
+            ...data,
+            status: "pending",
+            updated_at: new Date().toISOString()
+        });
+
+    if (error) return { success: false, error: error.message };
+    return { success: true, error: null };
+}
+
+/* ── Get User's Rider Application ───────────────────────────── */
+export async function getRiderApplication() {
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data } = await (supabase as any)
+        .from("rider_applications")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+
+    return data ?? null;
+}

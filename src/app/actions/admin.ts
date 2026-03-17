@@ -447,3 +447,72 @@ export async function getSystemLogs(limit = 100, page = 0) {
     return { data: data || [], count: count ?? 0 };
 }
 
+/* ── Rider Applications Management ──────────────────────────── */
+export async function getRiderApplications(status = "pending") {
+    const supabase = await requireAdmin();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let query = (supabase as any).from("rider_applications").select("*").order("created_at", { ascending: false });
+    if (status !== "all") query = query.eq("status", status);
+    const { data } = await query;
+    return data || [];
+}
+
+export async function processRiderApplication(
+    applicationId: string,
+    action: "approve" | "reject",
+    rejectionReason?: string
+): Promise<{ success: boolean; error: string | null }> {
+    const supabase = await requireAdmin();
+
+    // 1. Get the application
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: app } = await (supabase as any)
+        .from("rider_applications")
+        .select("*")
+        .eq("id", applicationId)
+        .single();
+    if (!app) return { success: false, error: "Application not found" };
+
+    if (action === "approve") {
+        // A. Create/Update row in riders table
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error: riderErr } = await (supabase as any)
+            .from("riders")
+            .upsert({
+                user_id: app.user_id,
+                full_name: app.full_name,
+                phone: app.phone,
+                vehicle_type: app.vehicle_type,
+                status: "active",
+                current_city: app.city,
+                updated_at: new Date().toISOString()
+            }, { onConflict: "phone" });
+
+        if (riderErr) return { success: false, error: `Failed to create rider: ${riderErr.message}` };
+
+        // B. Update profile to 'rider'
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error: roleErr } = await (supabase as any)
+            .from("profiles")
+            .update({ account_type: "rider" })
+            .eq("id", app.user_id);
+
+        if (roleErr) return { success: false, error: `Failed to update user role: ${roleErr.message}` };
+
+        // C. Update application status
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any).from("rider_applications")
+            .update({ status: "approved" })
+            .eq("id", applicationId);
+
+    } else {
+        // Reject
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any).from("rider_applications")
+            .update({ status: "rejected", rejection_reason: rejectionReason })
+            .eq("id", applicationId);
+    }
+
+    return { success: true, error: null };
+}
+
