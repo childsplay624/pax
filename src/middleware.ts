@@ -27,7 +27,8 @@ export async function middleware(request: NextRequest) {
         request.nextUrl.pathname.startsWith("/admin") ||
         request.nextUrl.pathname.startsWith("/account") ||
         request.nextUrl.pathname.startsWith("/dashboard") ||
-        request.nextUrl.pathname.startsWith("/rider")
+        request.nextUrl.pathname.startsWith("/rider") ||
+        request.nextUrl.pathname.startsWith("/riders")
     ) {
         if (!session) {
             const url = request.nextUrl.clone();
@@ -89,5 +90,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-    matcher: ["/admin/:path*", "/account/:path*", "/dashboard/:path*", "/rider/:path*", "/book/:path*"],
+    matcher: ["/admin/:path*", "/account/:path*", "/dashboard/:path*", "/rider/:path*", "/riders/:path*", "/book/:path*"],
 };

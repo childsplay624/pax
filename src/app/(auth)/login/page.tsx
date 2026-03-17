@@ -204,6 +204,16 @@ export default function LoginPage() {
                 <motion.div initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6 }}
                     className="w-full max-w-md mx-auto py-16">
 
+                    {/* Back to Home */}
+                    <div className="flex items-center justify-between mb-8">
+                        <Link href="/" className="group flex items-center gap-2 text-ink-300 hover:text-red-brand transition-all text-xs font-bold uppercase tracking-widest">
+                            <motion.div initial={{ x: 0 }} whileHover={{ x: -4 }} className="w-8 h-8 rounded-full border border-surface-200 flex items-center justify-center group-hover:border-red-brand/30 group-hover:bg-red-brand/5">
+                                <ArrowRight className="w-3.5 h-3.5 rotate-180" />
+                            </motion.div>
+                            Back to Home
+                        </Link>
+                    </div>
+
                     {/* Mobile logo */}
                     <div className="flex items-center gap-2.5 mb-10 lg:hidden">
                         <div className="w-9 h-9 bg-red-brand rounded-xl flex items-center justify-center shadow-lg shadow-red-brand/30">

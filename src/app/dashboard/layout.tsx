@@ -114,7 +114,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </Link>
 
                 {user?.role !== "rider" && (
-                    <Link href="/dashboard/riders/apply" onClick={() => setOpen(false)}
+                    <Link href="/riders/apply" onClick={() => setOpen(false)}
                         className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-red-brand/70 hover:text-red-brand hover:bg-red-brand/5 transition-all mt-2 border border-red-brand/10">
                         <Bike className="w-4 h-4" />
                         <span className="flex-1">Become a Rider</span>
