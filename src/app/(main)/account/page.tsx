@@ -228,11 +228,11 @@ export default function AccountPage() {
                     {/* ── Side Actions: Quick Tools ── */}
                     <div className="space-y-6">
                         
-                        {/* Quick Actions Card */}
-                        <div className={cn(BOX, "p-8 bg-ink-900 border-none shadow-2xl")}>
-                             <div className="flex items-center gap-3 mb-8 text-white">
-                                <div className={cn(ACCENT_BAR, "bg-red-400")} />
-                                <h2 className="text-xl font-bold" style={{ fontFamily: "Space Grotesk, sans-serif" }}>Help Center</h2>
+                        {/* Help Center Section */}
+                        <div className={cn(BOX, "p-8 bg-black border-none shadow-2xl")}>
+                             <div className="flex items-center gap-3 mb-8">
+                                <div className={cn(ACCENT_BAR, "bg-red-brand")} />
+                                <h2 className="text-xl font-bold text-white uppercase tracking-tight" style={{ fontFamily: "Space Grotesk, sans-serif" }}>Help Center</h2>
                             </div>
                             
                             <div className="space-y-3">
@@ -252,10 +252,28 @@ export default function AccountPage() {
                                         </motion.div>
                                     </Link>
                                 ))}
+
+                                {/* Become a Rider - Now inside Help Center */}
+                                {user?.role !== "rider" && (
+                                    <Link href="/dashboard/riders/apply">
+                                        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.8 }}
+                                            className="flex items-center gap-4 p-4 rounded-2xl bg-red-brand/10 border border-red-brand/20 hover:bg-red-brand/20 transition-all group overflow-hidden relative">
+                                            <div className="absolute top-0 right-0 w-16 h-16 bg-red-brand/10 rounded-full -mr-8 -mt-8 blur-xl" />
+                                            <div className="w-10 h-10 rounded-xl bg-red-brand text-white flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105 shadow-lg shadow-red-brand/20">
+                                                <Bike className="w-5 h-5" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <span className="text-white font-bold text-sm block leading-none">Become a Rider</span>
+                                                <span className="text-red-400 text-[10px] font-bold uppercase tracking-widest mt-1 block">Earn with PAV</span>
+                                            </div>
+                                            <Zap className="w-4 h-4 text-red-brand/40 animate-pulse" />
+                                        </motion.div>
+                                    </Link>
+                                )}
                             </div>
 
                             <div className="mt-8 pt-6 border-t border-white/5">
-                                <div className="bg-gradient-to-br from-red- brand/10 to-red-400/5 p-5 rounded-2xl border border-red-500/20">
+                                <div className="bg-white/[0.02] p-5 rounded-2xl border border-white/5">
                                     <Heart className="w-5 h-5 text-red-brand mb-3" />
                                     <p className="text-white text-xs font-bold mb-1">Need assistance?</p>
                                     <p className="text-white/40 text-[10px] leading-relaxed mb-4">Our support team is available 24/7 to help with your deliveries.</p>
@@ -282,23 +300,6 @@ export default function AccountPage() {
                             </Link>
                         </div>
 
-                        {/* Become a Rider CTA */}
-                        {user?.role !== "rider" && (
-                            <div className={cn(BOX, "p-8 bg-gradient-to-br from-red-600 to-rose-700 border-none relative overflow-hidden group shadow-xl shadow-red-900/10")}>
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-3xl" />
-                                <div className="absolute bottom-0 left-0 w-24 h-24 bg-rose-400/20 rounded-full -ml-12 -mb-12 blur-2xl" />
-                                
-                                <Bike className="w-8 h-8 text-white/40 mb-4 group-hover:-rotate-12 transition-transform" />
-                                <h3 className="text-white font-bold text-xl leading-tight mb-2" style={{ fontFamily: "Space Grotesk, sans-serif" }}>
-                                    Want to Earn?<br />Join the Fleet.
-                                </h3>
-                                <p className="text-white/60 text-xs leading-relaxed mb-6 font-medium">Become a PAX Rider today. Flexible hours, great earnings, and instant payouts.</p>
-                                <Link href="/dashboard/riders/apply" 
-                                    className="bg-white text-rose-700 px-6 py-2.5 rounded-full font-bold text-xs shadow-lg shadow-black/10 hover:shadow-black/20 transition-all active:scale-95 flex items-center justify-center gap-2 group/btn">
-                                    Become a Rider <Zap className="w-3.5 h-3.5 group-hover/btn:animate-pulse" />
-                                </Link>
-                            </div>
-                        )}
 
                     </div>
 
