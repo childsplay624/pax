@@ -238,7 +238,7 @@ export default function AccountPage() {
                             <div className="space-y-3">
                                 {[
                                     { label: "Track Package",   icon: Search,      href: "/tracking",        color: "bg-blue-400/10 text-blue-400" },
-                                    { label: "Book Pickup",     icon: MapPin,      href: "/book",            color: "bg-red-400/10 text-red-400" },
+                                    { label: "Book Pickup",     icon: MapPin,      href: "/book?type=pickup", color: "bg-red-400/10 text-red-400" },
                                     { label: "Pricing Calculator", icon: Wallet,   href: "/pricing",         color: "bg-emerald-400/10 text-emerald-400" },
                                     { label: "Safety Tips",    icon: ShieldCheck, href: "/about",           color: "bg-purple-400/10 text-purple-400" },
                                 ].map((tool, i) => (

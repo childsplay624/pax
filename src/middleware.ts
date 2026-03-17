@@ -78,8 +78,8 @@ export async function middleware(request: NextRequest) {
             return NextResponse.redirect(url);
         }
 
-        // Strict /rider protection
-        if (request.nextUrl.pathname.startsWith("/rider") && account_type !== "rider") {
+        // Strict /rider protection (excluding the /riders application route)
+        if (request.nextUrl.pathname.startsWith("/rider") && !request.nextUrl.pathname.startsWith("/riders") && account_type !== "rider") {
             const url = request.nextUrl.clone();
             url.pathname = account_type === "admin" ? "/admin" : (account_type === "business" ? "/dashboard" : "/account");
             return NextResponse.redirect(url);

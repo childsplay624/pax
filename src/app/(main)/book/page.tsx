@@ -160,7 +160,7 @@ function BookingContent() {
                         </button>
                     </div>
                     <h1 className="text-5xl md:text-7xl font-bold text-ink-900 tracking-tight mb-4" style={{ fontFamily: "Space Grotesk, sans-serif" }}>
-                        Book a <span className="gradient-text-red">Shipment</span>
+                        Book a <span className="gradient-text-red">{params.get("type") === "pickup" ? "Pickup" : "Shipment"}</span>
                     </h1>
                     <p className="text-ink-400">Fill in the details and we'll handle everything.</p>
                 </div>
