@@ -2,7 +2,7 @@
 
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 
-const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY!;
+const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY || "placeholder-key";
 const PAYSTACK_BASE = "https://api.paystack.co";
 
 /* ── Initialize a wallet top-up transaction ──────────────────────
