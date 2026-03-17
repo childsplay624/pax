@@ -328,6 +328,13 @@ export async function submitRiderApplication(data: {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, error: "Unauthorized" };
 
+    // Enforcement: Only personal accounts can apply
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: profile } = await (supabase as any).from("profiles").select("account_type").eq("id", user.id).single();
+    if (profile?.account_type !== "personal") {
+        return { success: false, error: "Only personal accounts are eligible to apply as riders." };
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase as any)
         .from("rider_applications")

@@ -192,9 +192,18 @@ export async function signOut(): Promise<void> {
     redirect("/login");
 }
 
-/* ── Get current session user ───────────────────────────────── */
-export async function getUser() {
+/* ── Get current session user profile ───────────────────────── */
+export async function getUserProfile() {
     const supabase = await createServerSupabaseClient();
     const { data: { user } } = await supabase.auth.getUser();
-    return user;
+    if (!user) return null;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: profile } = await (supabase as any)
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+    return { ...user, profile };
 }

@@ -10,6 +10,7 @@ import {
 import { cn } from "@/lib/utils";
 import { NIGERIAN_STATES } from "@/lib/pricing";
 import { submitRiderApplication, getRiderApplication } from "@/app/actions/rider";
+import { getUserProfile } from "@/app/actions/auth";
 
 const STEPS = [
     { id: "personal", title: "Identity", icon: User },
@@ -25,6 +26,7 @@ export default function RiderApplyPage() {
     const [isPending, start] = useTransition();
     const [existingApp, setExistingApp] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [isMerchant, setIsMerchant] = useState(false);
 
     const [form, setForm] = useState({
         full_name: "",
@@ -41,10 +43,16 @@ export default function RiderApplyPage() {
     });
 
     useEffect(() => {
-        getRiderApplication().then(app => {
+        Promise.all([
+            getRiderApplication(),
+            getUserProfile()
+        ]).then(([app, userWithProfile]) => {
             if (app) {
                 setExistingApp(app);
                 setForm(prev => ({ ...prev, ...app }));
+            }
+            if (userWithProfile?.profile?.account_type === "business") {
+                setIsMerchant(true);
             }
             setLoading(false);
         });
@@ -79,6 +87,38 @@ export default function RiderApplyPage() {
 
     const inputCls = "w-full bg-surface-50 border border-surface-200 rounded-2xl px-5 py-4 text-ink-900 font-medium placeholder-ink-300 outline-none focus:border-red-brand/50 focus:bg-white focus:ring-4 focus:ring-red-brand/8 transition-all text-[15px]";
     const labelCls = "block text-[11px] font-black text-ink-400 uppercase tracking-[0.15em] mb-2.5 px-1";
+
+    if (isMerchant) {
+        return (
+            <div className="bg-surface-50 min-h-screen pt-40 pb-24 relative overflow-hidden">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-[radial-gradient(ellipse_60%_40%_at_50%_0%,rgba(220,38,38,0.05),transparent)] pointer-events-none" />
+                <div className="relative z-10 max-w-2xl mx-auto px-6">
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={cn(BOX, "p-12 lg:p-20 text-center flex flex-col items-center")}>
+                        <div className="w-24 h-24 rounded-[2rem] bg-red-brand/10 border-2 border-red-brand/20 flex items-center justify-center mb-8">
+                            <Building2 className="w-10 h-10 text-red-brand" />
+                        </div>
+                        <h2 className="text-4xl font-black text-ink-900 mb-4" style={{ fontFamily: "Space Grotesk, sans-serif" }}>
+                            Merchant <span className="text-red-brand">Restriction</span>
+                        </h2>
+                        <p className="text-ink-400 text-lg leading-relaxed mb-10 font-medium">
+                            Rider accounts are exclusive to <b>Personal Account</b> holders. Business accounts cannot be converted to rider accounts.
+                        </p>
+                        <p className="text-ink-300 text-sm mb-12">
+                            To become a rider, please create a new personal account or contact support for assistance.
+                        </p>
+                        <div className="flex flex-col sm:flex-row gap-4">
+                            <a href="/account" className="px-8 py-4 bg-ink-900 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:-translate-y-1 transition-all">
+                                Back to Account
+                            </a>
+                            <a href="/contact" className="px-8 py-4 bg-white border border-surface-200 text-ink-600 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-surface-50 transition-all">
+                                Contact Support
+                            </a>
+                        </div>
+                    </motion.div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-surface-50 min-h-screen pt-40 pb-24 relative overflow-hidden">

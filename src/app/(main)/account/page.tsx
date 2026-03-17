@@ -254,7 +254,7 @@ export default function AccountPage() {
                                 ))}
 
                                 {/* Become a Rider - Now inside Help Center */}
-                                {user?.role !== "rider" && (
+                                {user?.role === "personal" && (
                                     <Link href="/riders/apply">
                                         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.8 }}
                                             className="flex items-center gap-4 p-4 rounded-2xl bg-red-brand/10 border border-red-brand/20 hover:bg-red-brand/20 transition-all group overflow-hidden relative">

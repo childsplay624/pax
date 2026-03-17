@@ -113,7 +113,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <ExternalLink className="w-3 h-3 opacity-40" />
                 </Link>
 
-                {user?.role !== "rider" && (
+                {user?.role === "personal" && (
                     <Link href="/riders/apply" onClick={() => setOpen(false)}
                         className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-red-brand/70 hover:text-red-brand hover:bg-red-brand/5 transition-all mt-2 border border-red-brand/10">
                         <Bike className="w-4 h-4" />
