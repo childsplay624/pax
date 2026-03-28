@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
     Zap, Package, BarChart3, User,
     LogOut, Menu, X, ChevronRight,
-    Radio, Activity
+    Radio, Activity, Navigation
 } from "lucide-react";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase";
@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
     { label: "Cockpit", href: "/rider", icon: Zap },
+    { label: "On-Demand Jobs", href: "/rider/on-demand", icon: Navigation },
     { label: "My Dispatch", href: "/rider/dispatch", icon: Package },
     { label: "Performance", href: "/rider/performance", icon: BarChart3 },
     { label: "Profile", href: "/rider/profile", icon: User },

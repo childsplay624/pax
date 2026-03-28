@@ -5,6 +5,7 @@ import Link from "next/link";
 import ServiceCard from "@/components/ServiceCard";
 import StatsSection from "@/components/StatsSection";
 import GlobeSection from "@/components/GlobeSection";
+import PartnerLogos from "@/components/PartnerLogos";
 import { Package, Globe, Shield, BarChart3, CheckCircle2, ArrowRight, Zap, Truck, Layers } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -14,10 +15,7 @@ const services = [
   { title: "E-commerce Fulfilment", description: "Warehousing, pick-pack, and returns management from our Lagos and Abuja fulfilment centres.", icon: Layers, href: "/services#ecommerce", imageUrl: "/images/sorting.png" },
 ];
 
-const trustBadges = [
-  "SON Registered", "Lagos Chamber of Commerce Member",
-  "Insured & Bonded", "NIPOST Licensed Courier", "98% On-Time Delivery",
-];
+
 
 const testimonials = [
   { name: "Amaka Obi", role: "Founder · ShopAmaka (Lagos)", quote: "PAN African Express completely transformed how I handle orders. Next-day Abuja delivery made customers out of followers overnight." },
@@ -41,16 +39,12 @@ export default function Home() {
       {/* ──────────────────────────────── HERO */}
       <Hero imageUrl="/images/hero.png" />
 
+
       {/* ──────────────────────────────── TRUST BADGES */}
-      <section className="py-6 bg-white border-b border-surface-200">
-        <div className="max-w-7xl mx-auto px-6 lg:px-12 flex flex-wrap items-center justify-center gap-10">
-          <span className="text-ink-300 text-[10px] font-bold uppercase tracking-[0.3em]">Trusted by Industry</span>
-          {trustBadges.map((b) => (
-            <div key={b} className="flex items-center gap-2 text-ink-400 hover:text-ink-900 transition-colors cursor-default">
-              <CheckCircle2 className="w-4 h-4 text-red-brand/60" />
-              <span className="font-bold text-xs">{b}</span>
-            </div>
-          ))}
+      <section className="py-10 bg-white border-b border-surface-200">
+        <div className="max-w-7xl mx-auto px-6 lg:px-12 flex flex-col items-center gap-8">
+          <span className="text-ink-300 text-[10px] font-bold uppercase tracking-[0.4em] mb-2 opacity-60">Regulated & Trusted by Leading Industry Partners</span>
+          <PartnerLogos />
         </div>
       </section>
 
@@ -176,11 +170,7 @@ export default function Home() {
               </motion.div>
             ))}
           </div>
-          <div className="mt-6 flex flex-wrap gap-3 justify-center">
-            {["Lagos → Abuja", "Lagos → Kano", "Lagos → PH", "Abuja → Enugu", "Kano → Kaduna"].map(r => (
-              <span key={r} className="glass rounded-full px-4 py-2 text-white/60 text-xs font-bold border border-white/[0.06]">{r}</span>
-            ))}
-          </div>
+
         </div>
       </section>
 

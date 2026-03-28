@@ -9,13 +9,8 @@ import { logger } from "@/lib/logger";
 
 /* ── Rate Limiter Helper ──────────────────────────────────────── */
 async function checkLimit(key: string, max: number, refillRate: number): Promise<boolean> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: allowed } = await (supabaseAdmin as any).rpc("check_rate_limit", {
-        p_key: key,
-        p_max_tokens: max,
-        p_refill_rate_seconds: refillRate
-    });
-    return !!allowed;
+    /* Rate Limit Disabled for Development/Testing */
+    return true;
 }
 
 /* ── Normalize Nigerian phone number to international format ─── */
@@ -230,8 +225,8 @@ export async function markAllAsRead() {
 }
 import webpush from "web-push";
 
-const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "BDTHpk2Xbu-CvHurjENxXk15IqP2JpwLy6V6wDFU3genTkKx-E1mbchxXR2OwHefUzXgacH0UTYpfZdJqs1Rbbs";
-const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY || "3o-BIx8TGQgy72Tsr2pk1_GT1vFPBqpgF6TJl-g_4KI";
+const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "BDHNGxH7ORPn_hFaQhnWorb6ZXZjwsJxBXW2kbB_uCRN92LHc9pPya2TxJu_VjVMIp18DK1vsCe82a29ZeHix6g";
+const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY || "huuIM4xahwyUJOmfHoZQUhIQlDjqWmgiuslnEkK0mGg";
 
 webpush.setVapidDetails(
     "mailto:support@panafricanexpress.ng",

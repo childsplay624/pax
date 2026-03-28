@@ -7,6 +7,7 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 export const metadata: Metadata = {
   title: "PAN African Express | Nigeria's Premier Interstate Courier & Logistics",
   description: "PAN African Express — fast, reliable parcel delivery and logistics across all 36 Nigerian states and the FCT. Expanding across Africa.",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

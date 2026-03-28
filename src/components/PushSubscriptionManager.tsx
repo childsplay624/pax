@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { BellRing, ShieldCheck, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { savePushSubscription } from "@/app/actions/notifications";
 
-const VAPID_PUBLIC = "BDTHpk2Xbu-CvHurjENxXk15IqP2JpwLy6V6wDFU3genTkKx-E1mbchxXR2OwHefUzXgacH0UTYpfZdJqs1Rbbs";
+const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "BDHNGxH7ORPn_hFaQhnWorb6ZXZjwsJxBXW2kbB_uCRN92LHc9pPya2TxJu_VjVMIp18DK1vsCe82a29ZeHix6g";
 
 export function PushSubscriptionManager() {
     const [showPrompt, setShowPrompt] = useState(false);
@@ -37,7 +37,10 @@ export function PushSubscriptionManager() {
         return outputArray;
     };
 
+    const isSyncing = useRef(false);
     const syncSubscription = async () => {
+        if (isSyncing.current) return;
+        isSyncing.current = true;
         try {
             const registration = await navigator.serviceWorker.register("/sw.js");
             let subscription = await registration.pushManager.getSubscription();
@@ -53,6 +56,8 @@ export function PushSubscriptionManager() {
             await savePushSubscription(sub);
         } catch (err) {
             console.error("[Push] Sync failed:", err);
+        } finally {
+            isSyncing.current = false;
         }
     };
 

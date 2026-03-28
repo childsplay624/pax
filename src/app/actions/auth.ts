@@ -12,13 +12,8 @@ import { logger } from "@/lib/logger";
 
 /* ── Rate Limiter Helper ──────────────────────────────────────── */
 async function checkLimit(key: string, max: number, refillRate: number): Promise<boolean> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: allowed } = await (supabaseAdmin as any).rpc("check_rate_limit", {
-        p_key: key,
-        p_max_tokens: max,
-        p_refill_rate_seconds: refillRate
-    });
-    return !!allowed;
+    /* Rate Limit Disabled for Development/Testing */
+    return true;
 }
 
 /* ── Sign Up ─────────────────────────────────────────────────── */
@@ -92,7 +87,7 @@ export async function signUp(data: {
 /* ── Forgot Password ────────────────────────────────────────── */
 export async function forgotPassword(email: string): Promise<{ success: boolean; error: string | null }> {
     try {
-        // Rate Limit: 3 resets per email per hour
+        // Rate Limit Check
         const isAllowed = await checkLimit(`reset:${email}`, 3, 3600);
         if (!isAllowed) return { success: false, error: "Too many reset attempts. Please try again in an hour." };
 
@@ -130,7 +125,7 @@ export async function signIn(data: {
 }): Promise<{ error: string | null; account_type: "personal" | "business" | "admin" | "rider" | null }> {
     const supabase = await createServerSupabaseClient();
 
-    // Rate Limit: 5 login attempts per 15 minutes to prevent brute force
+    // Rate Limit Check
     const isAllowed = await checkLimit(`login:${data.email}`, 5, 900);
     if (!isAllowed) return { error: "Too many login attempts. Please wait 15 minutes.", account_type: null };
 

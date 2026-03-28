@@ -1,38 +1,36 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 // ═══════════════════════════════════════════════════════
-//  PAX RIDER APP  ·  com.panafricanexpress.rider
-//  This config builds the RIDER APK (PAX Rider).
-//  For the Customer APK see: capacitor.customer.config.ts
+//  PAN EXPRESS CUSTOMER APP  ·  com.panafricanexpress.app
+//  This config builds the CUSTOMER APK (PAN Express).
+//  For the Rider APK see: capacitor.config.ts
 // ═══════════════════════════════════════════════════════
 
 const config: CapacitorConfig = {
-  appId: 'com.panafricanexpress.rider',
-  appName: 'PAX Rider',
+  appId: 'com.panafricanexpress.app',
+  appName: 'PAN Express',
   webDir: 'out',
   server: {
-    // ── Production: opens directly on the rider dashboard ──
-    url: 'https://panafricanexpress.ng/rider',
+    // ── Production: opens on customer home ─────────────────
+    url: 'https://panafricanexpress.ng',
     // ── Local dev: comment above line, uncomment below ─────
-    // url: 'http://localhost:3000/rider',
+    // url: 'http://localhost:3000',
     cleartext: false,
   },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 2000,
+      launchShowDuration: 2500,
       launchAutoHide: true,
-      backgroundColor: "#0a0a0e",
+      backgroundColor: "#ffffff",       // white splash for customer app
       androidScaleType: "CENTER_CROP",
-      showSpinner: true,
-      androidSpinnerStyle: "large",
-      spinnerColor: "#eb0000",
+      showSpinner: false,               // clean, no spinner for customer
     },
     StatusBar: {
-      backgroundColor: "#0a0a0e",
+      backgroundColor: "#ffffff",
     },
     Keyboard: {
       resize: "body",
-      style: "dark",
+      style: "light",
     },
     PushNotifications: {
       presentationOptions: ["badge", "sound", "alert"],
