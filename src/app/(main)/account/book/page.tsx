@@ -15,7 +15,8 @@ import {
     useMapsLibrary,
 } from "@vis.gl/react-google-maps";
 import { cn } from "@/lib/utils";
-import { createBookingRequest, calculateBookingPrice, getSavedAddresses } from "@/app/actions/on_demand";
+import { createBookingRequest, getSavedAddresses } from "@/app/actions/on_demand";
+import { calculateBookingPrice } from "@/lib/pricing";
 import { supabase } from "@/lib/supabase";
 
 const GOOGLE_MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY!;

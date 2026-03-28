@@ -1,39 +1,7 @@
 "use server";
 
 import { createServerSupabaseClient } from "@/lib/supabase-server";
-
-/* ─── Haversine distance formula (km) ─────────────────────────── */
-function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-    const R = 6371;
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLng = ((lng2 - lng1) * Math.PI) / 180;
-    const a =
-        Math.sin(dLat / 2) ** 2 +
-        Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLng / 2) ** 2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-/* ─── Price calculation ────────────────────────────────────────── */
-const BASE_FARE = 500;
-const PER_KM = 80;
-const PER_KG = 50;
-const SIZE_MULTIPLIER: Record<string, number> = {
-    small: 1,
-    medium: 1.3,
-    large: 1.6,
-    xl: 2,
-};
-
-export function calculateBookingPrice(
-    distanceKm: number,
-    weightKg: number,
-    packageSize: "small" | "medium" | "large" | "xl"
-): number {
-    const base = BASE_FARE + distanceKm * PER_KM + weightKg * PER_KG;
-    return Math.round(base * (SIZE_MULTIPLIER[packageSize] ?? 1));
-}
+import { haversineKm, calculateBookingPrice } from "@/lib/pricing";
 
 /* ─── Create a new on-demand booking ──────────────────────────── */
 export async function createBookingRequest(data: {
