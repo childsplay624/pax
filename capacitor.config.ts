@@ -12,7 +12,7 @@ const config: CapacitorConfig = {
   webDir: 'out',
   server: {
     // ── Production: opens directly on the rider dashboard ──
-    url: 'https://panafricanexpress.ng/rider',
+    url: 'https://panafricanexpress.com/rider',
     // ── Local dev: comment above line, uncomment below ─────
     // url: 'http://localhost:3000/rider',
     cleartext: false,

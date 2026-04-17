@@ -20,7 +20,7 @@ export async function middleware(request: NextRequest) {
         }
     );
 
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { user } } = await supabase.auth.getUser();
 
     // Protect /admin, /account, /dashboard, and /rider routes
     if (
@@ -30,21 +30,21 @@ export async function middleware(request: NextRequest) {
         request.nextUrl.pathname.startsWith("/rider") ||
         request.nextUrl.pathname.startsWith("/riders")
     ) {
-        if (!session) {
+        if (!user) {
             const url = request.nextUrl.clone();
             url.pathname = "/login";
             url.searchParams.set("redirect", request.nextUrl.pathname);
             return NextResponse.redirect(url);
         }
 
-        let account_type = session.user.user_metadata?.account_type;
+        let account_type = user.user_metadata?.account_type;
 
         // Fallback: If metadata is missing account_type, fetch from profiles
         if (!account_type) {
             const { data: profile } = await supabase
                 .from("profiles")
                 .select("account_type")
-                .eq("id", session.user.id)
+                .eq("id", user.id)
                 .single();
 
             if (profile) {
@@ -54,7 +54,7 @@ export async function middleware(request: NextRequest) {
                 const { data: rider } = await supabase
                     .from("riders")
                     .select("id")
-                    .eq("user_id", session.user.id)
+                    .eq("user_id", user.id)
                     .maybeSingle();
 
                 if (rider) account_type = "rider";

@@ -59,13 +59,12 @@ const Navbar = () => {
         window.addEventListener("scroll", onScroll, { passive: true });
 
         // Auth state listener
-        supabase.auth.getSession().then(({ data }) => {
-            const user = data.session?.user;
+        supabase.auth.getUser().then(({ data: { user } }) => {
             setUserEmail(user?.email ?? null);
             setAccountType(user?.user_metadata?.account_type ?? null);
         });
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            const user = session?.user;
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+            const { data: { user } } = await supabase.auth.getUser();
             setUserEmail(user?.email ?? null);
             setAccountType(user?.user_metadata?.account_type ?? null);
         });
